@@ -1,50 +1,14 @@
-import { defineConfig, Plugin } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { createServer } from "./server";
-
-"scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "preview": "vite preview"
-}
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
+  plugins: [react()],
   server: {
     host: "0.0.0.0",
-    port: 8080,
-
-    fs: {
-      allow: [
-        path.resolve(__dirname),
-        path.resolve(__dirname, "client"),
-        path.resolve(__dirname, "shared"),
-      ],
-    },
+    port: 5173,
   },
-
-  plugins: [react(), expressPlugin()],
-
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./client"),
-      "@shared": path.resolve(__dirname, "./shared"),
-    },
-  },
-
-  build: {
-    outDir: "dist",
+  preview: {
+    host: "0.0.0.0",
+    port: 10000,
   },
 });
-
-function expressPlugin(): Plugin {
-  return {
-    name: "express-plugin",
-    apply: "serve",
-
-    configureServer(server) {
-      const app = createServer();
-      server.middlewares.use(app);
-    },
-  };
-}
