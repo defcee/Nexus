@@ -1,38 +1,29 @@
 import path from "path";
-import express from "express";
+import { fileURLToPath } from "url";
 import { createServer } from "./index";
+import express from "express";
 
 const app = createServer();
 const port = process.env.PORT || 3000;
 
-// Get current directory
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
+// Fix __dirname for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Production build path
+// Frontend build folder
 const distPath = path.join(__dirname, "../spa");
 
 // Serve static frontend files
 app.use(express.static(distPath));
 
-// Health check route
-app.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    uptime: process.uptime(),
-  });
-});
-
 // React Router fallback
-// IMPORTANT: Express 5 no longer supports "*"
-app.get("/*", (req, res) => {
+app.use((req, res, next) => {
   // Skip API routes
   if (
     req.path.startsWith("/api/") ||
     req.path.startsWith("/health")
   ) {
-    return res.status(404).json({
-      error: "API endpoint not found",
-    });
+    return next();
   }
 
   res.sendFile(path.join(distPath, "index.html"));
@@ -40,18 +31,18 @@ app.get("/*", (req, res) => {
 
 // Start server
 app.listen(port, () => {
-  console.log(`🚀 Fusion Starter server running on port ${port}`);
+  console.log(`🚀 Server running on port ${port}`);
   console.log(`📱 Frontend: http://localhost:${port}`);
   console.log(`🔧 API: http://localhost:${port}/api`);
 });
 
 // Graceful shutdown
 process.on("SIGTERM", () => {
-  console.log("🛑 Received SIGTERM, shutting down gracefully");
+  console.log("🛑 Received SIGTERM");
   process.exit(0);
 });
 
 process.on("SIGINT", () => {
-  console.log("🛑 Received SIGINT, shutting down gracefully");
+  console.log("🛑 Received SIGINT");
   process.exit(0);
 });
