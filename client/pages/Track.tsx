@@ -13,7 +13,6 @@ import {
   Search,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import TrackingMap from "@/components/TrackingMap";
 
 interface TrackingData {
   trackingNumber: string;
@@ -230,30 +229,7 @@ export default function Track() {
                 </CardContent>
               </Card>
 
-              {/* Map Section */}
-              <Card className="border-primary/20 overflow-hidden">
-                <CardHeader>
-                  <CardTitle>Live Location Map</CardTitle>
-                  <CardDescription>Real-time GPS tracking with route history</CardDescription>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <TrackingMap
-                    currentLocation={trackingData.coordinates}
-                    locationName={trackingData.currentLocation}
-                    routeHistory={trackingData.history.map((item) => ({
-                      lat: item.coordinates?.lat || trackingData.coordinates.lat,
-                      lng: item.coordinates?.lng || trackingData.coordinates.lng,
-                      location: item.location,
-                      status: item.status,
-                    }))}
-                  />
-                  <p className="text-xs text-gray-500 mt-4">
-                    <span className="font-semibold text-primary">Legend:</span> Blue circle = Current location | Numbered markers = Route history | Dashed line = Delivery route
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Status Timeline */}
+                            {/* Status Timeline */}
               <Card className="border-primary/20">
                 <CardHeader>
                   <CardTitle>Tracking History</CardTitle>
