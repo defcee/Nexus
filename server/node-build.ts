@@ -1,27 +1,44 @@
 import path from "path";
+import express from "express";
 import { createServer } from "./index";
-import * as express from "express";
 
 const app = createServer();
 const port = process.env.PORT || 3000;
 
-// In production, serve the built SPA files
-const __dirname = import.meta.dirname;
+// Get current directory
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
+
+// Production build path
 const distPath = path.join(__dirname, "../spa");
 
-// Serve static files
+// Serve static frontend files
 app.use(express.static(distPath));
 
-// Handle React Router - serve index.html for all non-API routes
-app.get("*", (req, res) => {
-  // Don't serve index.html for API routes
-  if (req.path.startsWith("/api/") || req.path.startsWith("/health")) {
-    return res.status(404).json({ error: "API endpoint not found" });
+// Health check route
+app.get("/health", (_req, res) => {
+  res.json({
+    status: "ok",
+    uptime: process.uptime(),
+  });
+});
+
+// React Router fallback
+// IMPORTANT: Express 5 no longer supports "*"
+app.get("/*", (req, res) => {
+  // Skip API routes
+  if (
+    req.path.startsWith("/api/") ||
+    req.path.startsWith("/health")
+  ) {
+    return res.status(404).json({
+      error: "API endpoint not found",
+    });
   }
 
   res.sendFile(path.join(distPath, "index.html"));
 });
 
+// Start server
 app.listen(port, () => {
   console.log(`🚀 Fusion Starter server running on port ${port}`);
   console.log(`📱 Frontend: http://localhost:${port}`);
