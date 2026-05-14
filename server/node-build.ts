@@ -1,7 +1,7 @@
 import path from "path";
 import { fileURLToPath } from "url";
-import { createServer } from "./index";
 import express from "express";
+import { createServer } from "./index";
 
 const app = createServer();
 const port = process.env.PORT || 3000;
@@ -10,22 +10,30 @@ const port = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Frontend build folder
+// Path to frontend build
 const distPath = path.join(__dirname, "../spa");
 
 // Serve static frontend files
 app.use(express.static(distPath));
 
-// React Router fallback
-app.use((req, res, next) => {
-  // Skip API routes
-  if (
-    req.path.startsWith("/api/") ||
-    req.path.startsWith("/health")
-  ) {
-    return next();
-  }
+// Health check route
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "Server is running",
+  });
+});
 
+// API 404 handler
+app.use("/api", (_req, res) => {
+  res.status(404).json({
+    error: "API route not found",
+  });
+});
+
+// React SPA fallback
+// Serves index.html for all frontend routes
+app.get(/^(?!\/api).*/, (_req, res) => {
   res.sendFile(path.join(distPath, "index.html"));
 });
 
