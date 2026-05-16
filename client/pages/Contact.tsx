@@ -43,12 +43,7 @@ export default function Contact() {
       details: "support@nexusglobalparcel.com",
       image: "/assets/contact-email.jpg"
     },
-    {
-      icon: MapPin,
-      title: "Address",
-      details: "No 1 Bende Street, Port Harcourt, Rivers State",
-      image: "/assets/contact-location.jpg"
-    },
+    
     {
       icon: Clock,
       title: "Hours",

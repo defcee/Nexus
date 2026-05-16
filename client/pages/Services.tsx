@@ -17,7 +17,7 @@ export default function Services() {
         "Signature confirmation"
       ],
       image: "/assets/local-delivery.jpg",
-      price: "From $500"
+      
     },
     {
       icon: MapPin,
@@ -30,7 +30,7 @@ export default function Services() {
         "Express & Standard options"
       ],
       image: "/assets/international-shipping.jpg",
-      price: "From $2,500"
+      
     },
     {
       icon: Zap,
@@ -43,7 +43,7 @@ export default function Services() {
         "Guaranteed on-time delivery"
       ],
       image: "/assets/same-day-express.jpg",
-      price: "From $1,500"
+      
     },
     {
       icon: Shield,
@@ -56,7 +56,7 @@ export default function Services() {
         "Gentle handling guarantee"
       ],
       image: "/assets/fragile-handling.jpg",
-      price: "From $800"
+      
     },
     {
       icon: Clock,
@@ -69,7 +69,7 @@ export default function Services() {
         "Specialized handling"
       ],
       image: "/assets/refrigerated-shipping.jpg",
-      price: "From $1,200"
+      
     },
     {
       icon: CheckCircle,
@@ -82,7 +82,7 @@ export default function Services() {
         "Legal document certified"
       ],
       image: "/assets/document-delivery.jpg",
-      price: "From $300"
+      
     },
   ];
 

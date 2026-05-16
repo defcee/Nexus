@@ -5,11 +5,14 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, ArrowRight } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { isValidPhoneNumber } from 'react-phone-number-input';
-import PhoneInput from 'react-phone-number-input';
+import { isValidPhoneNumber } from "react-phone-number-input";
+import PhoneInput from "react-phone-number-input";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function Signup() {
   const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -17,6 +20,7 @@ export default function Signup() {
     password: "",
     confirmPassword: "",
   });
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -35,10 +39,10 @@ export default function Signup() {
     }
 
     if (!formData.phone) {
-  newErrors.phone = "Phone number is required";
-} else if (!isValidPhoneNumber(formData.phone)) {
-  newErrors.phone = "Invalid phone number";
-}
+      newErrors.phone = "Phone number is required";
+    } else if (!isValidPhoneNumber(formData.phone)) {
+      newErrors.phone = "Invalid phone number";
+    }
 
     if (!formData.password) {
       newErrors.password = "Password is required";
@@ -56,11 +60,12 @@ export default function Signup() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-    // Clear error for this field
+
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -72,29 +77,34 @@ export default function Signup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
     setSuccessMessage("");
 
     try {
-      // In a real app, this would be an API call
-      const response = await fetch("/api/signup", {
+      const response = await fetch(`${API_URL}/api/signup`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(formData),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        setSuccessMessage("Account created successfully! Redirecting to login...");
+        setSuccessMessage("Account created successfully! Redirecting...");
         setTimeout(() => navigate("/login"), 2000);
       } else {
-        setErrors({ submit: "Failed to create account. Please try again." });
+        setErrors({
+          submit: data?.message || "Failed to create account. Try again.",
+        });
       }
     } catch (error) {
-      setErrors({ submit: "An error occurred. Please try again." });
+      setErrors({
+        submit: "Network error. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -106,8 +116,12 @@ export default function Signup() {
         <div className="container max-w-md">
           <div className="bg-white rounded-2xl p-8 shadow-lg">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-primary mb-2">Create Account</h1>
-              <p className="text-gray-600">Join Nexus Global for seamless parcel delivery</p>
+              <h1 className="text-3xl font-bold text-primary mb-2">
+                Create Account
+              </h1>
+              <p className="text-gray-600">
+                Join Nexus Global for seamless parcel delivery
+              </p>
             </div>
 
             {successMessage && (
@@ -128,120 +142,61 @@ export default function Signup() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name
-                </label>
-                <Input
-                  type="text"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  placeholder="John Doe"
-                  className={errors.fullName ? "border-red-500" : ""}
-                />
-                {errors.fullName && (
-                  <p className="text-red-600 text-sm mt-1">{errors.fullName}</p>
-                )}
-              </div>
+              <Input
+                name="fullName"
+                value={formData.fullName}
+                onChange={handleChange}
+                placeholder="Full Name"
+              />
+              {errors.fullName && <p>{errors.fullName}</p>}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <Input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="john@example.com"
-                  className={errors.email ? "border-red-500" : ""}
-                />
-                {errors.email && (
-                  <p className="text-red-600 text-sm mt-1">{errors.email}</p>
-                )}
-              </div>
+              <Input
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Email"
+              />
+              {errors.email && <p>{errors.email}</p>}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number
-                </label>
-                <PhoneInput
-  international
-  defaultCountry="US"
-  value={formData.phone}
-  onChange={(value) => {
-    setFormData((prev) => ({
-      ...prev,
-      phone: value || "",
-    }));
+              <PhoneInput
+                international
+                defaultCountry="US"
+                value={formData.phone}
+                onChange={(value) =>
+                  setFormData((p) => ({
+                    ...p,
+                    phone: value || "",
+                  }))
+                }
+              />
+              {errors.phone && <p>{errors.phone}</p>}
 
-    if (errors.phone) {
-      setErrors((prev) => ({
-        ...prev,
-        phone: "",
-      }));
-    }
-  }}
-  className={`w-full border rounded-md px-3 py-2 ${
-    errors.phone ? "border-red-500" : "border-gray-300"
-  }`}
-/>
-                {errors.phone && (
-                  <p className="text-red-600 text-sm mt-1">{errors.phone}</p>
-                )}
-              </div>
+              <Input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Password"
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
-                <Input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  className={errors.password ? "border-red-500" : ""}
-                />
-                {errors.password && (
-                  <p className="text-red-600 text-sm mt-1">{errors.password}</p>
-                )}
-              </div>
+              <Input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Confirm Password"
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password
-                </label>
-                <Input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  className={errors.confirmPassword ? "border-red-500" : ""}
-                />
-                {errors.confirmPassword && (
-                  <p className="text-red-600 text-sm mt-1">{errors.confirmPassword}</p>
-                )}
-              </div>
-
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full gap-2 bg-secondary hover:bg-secondary/90"
-              >
-                {loading ? "Creating Account..." : "Sign Up"} <ArrowRight size={18} />
+              <Button type="submit" disabled={loading}>
+                {loading ? "Creating..." : "Sign Up"}{" "}
+                <ArrowRight size={18} />
               </Button>
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-gray-600">
-                Already have an account?{" "}
-                <Link to="/login" className="text-primary font-semibold hover:underline">
-                  Login here
-                </Link>
-              </p>
+              <Link to="/login" className="text-primary">
+                Already have an account?
+              </Link>
             </div>
           </div>
         </div>
