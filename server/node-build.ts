@@ -1,20 +1,11 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { createServer } from "./index";
 
-export default defineConfig({
-  plugins: [react()],
+const app = createServer();
 
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
-      },
-    },
-  },
+const PORT = process.env.PORT || 8080;
 
-  build: {
-    outDir: "dist/spa",
-    emptyOutDir: true,
-  },
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📱 Frontend: http://localhost:${PORT}`);
+  console.log(`🔧 API: http://localhost:${PORT}/api`);
 });
