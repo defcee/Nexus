@@ -92,7 +92,8 @@ export function createServer() {
 
   app.use(express.static(spaPath));
 
-  app.get("*", (_req, res) => {
+  // FIXED FOR EXPRESS 5 (NO "*")
+  app.use((_req, res) => {
     res.sendFile(path.join(spaPath, "index.html"));
   });
 
