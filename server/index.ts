@@ -1,10 +1,12 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import path from "path";
 
-import { pool } from "./db"; // 🔥 ADD POSTGRES CONNECTION
+import { pool } from "./db";
 
 import { handleDemo } from "./routes/demo";
+
 import {
   handleSignup,
   handleLogin,
@@ -38,13 +40,13 @@ export function createServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // -------------------- HEALTH CHECK --------------------
+  // -------------------- API ROUTES --------------------
+
   app.get("/api/ping", (_req, res) => {
     const ping = process.env.PING_MESSAGE ?? "ping";
     res.json({ message: ping });
   });
 
-  // -------------------- DB TEST ROUTE --------------------
   app.get("/api/db-test", async (_req, res) => {
     try {
       const result = await pool.query("SELECT NOW()");
@@ -62,20 +64,20 @@ export function createServer() {
 
   app.get("/api/demo", handleDemo);
 
-  // -------------------- AUTH ROUTES --------------------
+  // AUTH
   app.post("/api/signup", handleSignup);
   app.post("/api/login", handleLogin);
   app.get("/api/users/:id", handleGetProfile);
   app.put("/api/users/:id", handleUpdateProfile);
 
-  // -------------------- PACKAGE ROUTES --------------------
+  // PACKAGES
   app.post("/api/packages", handleCreatePackage);
   app.get("/api/packages/track/:trackingNumber", handleTrackPackage);
   app.get("/api/packages", handleGetAllPackages);
   app.put("/api/packages/:trackingNumber/status", handleUpdatePackageStatus);
   app.delete("/api/packages/:id", handleDeletePackage);
 
-  // -------------------- ADMIN ROUTES --------------------
+  // ADMIN
   app.post("/api/admin/login", handleAdminLogin);
   app.post("/api/admin/logout", handleAdminLogout);
   app.get("/api/admin/stats", handleGetAdminStats);
@@ -83,6 +85,16 @@ export function createServer() {
   app.post("/api/admin/chats", handleSaveChatMessage);
   app.get("/api/admin/invoices", handleGetInvoices);
   app.post("/api/admin/invoices", handleCreateInvoice);
+
+  // -------------------- FRONTEND --------------------
+
+  const spaPath = path.join(process.cwd(), "dist", "spa");
+
+  app.use(express.static(spaPath));
+
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(spaPath, "index.html"));
+  });
 
   return app;
 }
