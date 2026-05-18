@@ -35,12 +35,13 @@ import {
 export function createServer() {
   const app = express();
 
-  // -------------------- MIDDLEWARE --------------------
+  // Middleware
   app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
   // -------------------- API ROUTES --------------------
+
   app.get("/api/ping", (_req, res) => {
     const ping = process.env.PING_MESSAGE ?? "ping";
     res.json({ message: ping });
@@ -48,6 +49,7 @@ export function createServer() {
 
   app.get("/api/db-test", async (_req, res) => {
     try {
+      // mysql2/promise returns [rows, fields]
       const [rows] = await pool.query("SELECT NOW() AS now");
       res.json({
         message: "Database connected successfully",
@@ -78,7 +80,6 @@ export function createServer() {
   app.delete("/api/packages/:id", handleDeletePackage);
 
   // -------------------- ADMIN AUTH & ROUTES --------------------
-
 
   // Simple admin token-based middleware used for protecting admin API endpoints
   function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
@@ -114,13 +115,12 @@ export function createServer() {
 
   // -------------------- FRONTEND --------------------
 
-
   const spaPath = path.join(process.cwd(), "dist", "spa");
 
-  // Serve static files first
   app.use(express.static(spaPath));
 
-
+  // Serve index.html for SPA routes including /admin so the client-side admin UI can boot.
+  app.use((_req, res) => {
     res.sendFile(path.join(spaPath, "index.html"));
   });
 
