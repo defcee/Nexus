@@ -13,12 +13,12 @@ const distSpa = path.resolve(process.cwd(), 'dist', 'spa');
 app.use(express.static(distSpa, { index: false }));
 
 // Health check for cPanel / CloudLinux selector
-app.get(process.env.HEALTH_PATH || '/health', (req, res) => {
+app.use(process.env.HEALTH_PATH || '/health', (req, res) => {
   res.type('text').send('ok');
 });
 
 // Serve index.html for SPA routes (including /admin)
-app.get('*', (req, res) => {
+app.use('*', (req, res) => {
   const indexPath = path.join(distSpa, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.type('html').sendFile(indexPath);

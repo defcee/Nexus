@@ -42,12 +42,12 @@ export function createServer() {
 
   // -------------------- API ROUTES --------------------
 
-  app.get("/api/ping", (_req, res) => {
+  app.use("/api/ping", (_req, res) => {
     const ping = process.env.PING_MESSAGE ?? "ping";
     res.json({ message: ping });
   });
 
-  app.get("/api/db-test", async (_req, res) => {
+  app.use("/api/db-test", async (_req, res) => {
     try {
       // mysql2/promise returns [rows, fields]
       const [rows] = await pool.query("SELECT NOW() AS now");
@@ -64,18 +64,18 @@ export function createServer() {
     }
   });
 
-  app.get("/api/demo", handleDemo);
+  app.use("/api/demo", handleDemo);
 
   // AUTH (public routes kept server-side but client UI will be removed)
   app.post("/api/signup", handleSignup);
   app.post("/api/login", handleLogin);
-  app.get("/api/users/:id", handleGetProfile);
+  app.use("/api/users/:id", handleGetProfile);
   app.put("/api/users/:id", handleUpdateProfile);
 
   // PACKAGES
   app.post("/api/packages", handleCreatePackage);
-  app.get("/api/packages/track/:trackingNumber", handleTrackPackage);
-  app.get("/api/packages", handleGetAllPackages);
+  app.use("/api/packages/track/:trackingNumber", handleTrackPackage);
+  app.use("/api/packages", handleGetAllPackages);
   app.put("/api/packages/:trackingNumber/status", handleUpdatePackageStatus);
   app.delete("/api/packages/:id", handleDeletePackage);
 
@@ -100,16 +100,16 @@ export function createServer() {
 
   // Protect all other admin API endpoints
   app.post("/api/admin/logout", requireAdminAuth, handleAdminLogout);
-  app.get("/api/admin/stats", requireAdminAuth, handleGetAdminStats);
-  app.get("/api/admin/chats", requireAdminAuth, handleGetChatMessages);
+  app.use("/api/admin/stats", requireAdminAuth, handleGetAdminStats);
+  app.use("/api/admin/chats", requireAdminAuth, handleGetChatMessages);
   app.post("/api/admin/chats", requireAdminAuth, handleSaveChatMessage);
-  app.get("/api/admin/invoices", requireAdminAuth, handleGetInvoices);
+  app.use("/api/admin/invoices", requireAdminAuth, handleGetInvoices);
   app.post("/api/admin/invoices", requireAdminAuth, handleCreateInvoice);
 
   // -------------------- REMOVE/REDIRECT PUBLIC LOGIN & SIGNUP UI --------------------
   // The frontend login/signup routes are removed from the client. For safety, redirect those
   // requests to /admin so users land on the admin-only login page.
-  app.get(["/login", "/signup", "/auth/login", "/auth/signup"], (_req, res) => {
+  app.use(["/login", "/signup", "/auth/login", "/auth/signup"], (_req, res) => {
     return res.redirect(302, "/admin");
   });
 

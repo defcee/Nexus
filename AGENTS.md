@@ -130,7 +130,7 @@ export const handleMyRoute: RequestHandler = (req, res) => {
 import { handleMyRoute } from "./routes/my-route";
 
 // Add to the createServer function:
-app.get("/api/my-endpoint", handleMyRoute);
+app.use("/api/my-endpoint", handleMyRoute);
 ```
 
 4. Use in React components with type safety:
