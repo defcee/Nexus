@@ -2,8 +2,8 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Package,
   Users,
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
   const [packages, setPackages] = useState([
     { id: 1, tracking: "NEX1234567890", sender: "John Doe", receiver: "Jane Smith", status: "In Transit" },
@@ -33,6 +34,42 @@ const AdminDashboard = () => {
     weight: "",
     price: "",
   });
+
+  const [statsData, setStatsData] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("admin_token");
+    if (!token) {
+      navigate("/admin");
+      return;
+    }
+
+    const fetchStats = async () => {
+      setLoadingStats(true);
+      try {
+        const res = await fetch("/api/admin/stats", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (res.status === 401) {
+          // unauthorized - clear token and redirect to login
+          localStorage.removeItem("admin_token");
+          navigate("/admin");
+          return;
+        }
+        const data = await res.json();
+        setStatsData(data);
+      } catch (err) {
+        console.error("Failed to fetch admin stats", err);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    fetchStats();
+  }, [navigate]);
 
   const handleCreatePackage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,11 +94,16 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("admin_token");
+    navigate("/admin");
+  };
+
   const stats = [
-    { label: "Total Shipments", value: "5,234", icon: Package, color: "text-primary" },
-    { label: "Delivered", value: "4,892", icon: TrendingUp, color: "text-green-600" },
-    { label: "Pending", value: "342", icon: Package, color: "text-yellow-600" },
-    { label: "Total Users", value: "1,203", icon: Users, color: "text-secondary" },
+    { label: "Total Shipments", value: statsData?.totalShipments ?? "—", icon: Package, color: "text-primary" },
+    { label: "Delivered", value: statsData?.deliveredShipments ?? "—", icon: TrendingUp, color: "text-green-600" },
+    { label: "Pending", value: statsData?.pendingShipments ?? "—", icon: Package, color: "text-yellow-600" },
+    { label: "Total Users", value: statsData?.totalUsers ?? "—", icon: Users, color: "text-secondary" },
   ];
 
   const tabs = [
@@ -82,11 +124,11 @@ const AdminDashboard = () => {
               <h1 className="text-3xl font-bold text-primary">Admin Dashboard</h1>
               <p className="text-gray-600">Manage all operations and shipments</p>
             </div>
-            <Link to="/">
-              <Button variant="outline" className="gap-2">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleLogout} className="gap-2">
                 <LogOut size={18} /> Logout
               </Button>
-            </Link>
+            </div>
           </div>
 
           {/* Stats Grid */}
@@ -96,13 +138,11 @@ const AdminDashboard = () => {
               return (
                 <Card key={idx} className="border-primary/20">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-600">
-                      {stat.label}
-                    </CardTitle>
+                    <CardTitle className="text-sm font-medium text-gray-600">{stat.label}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between">
-                      <div className="text-3xl font-bold text-primary">{stat.value}</div>
+                      <div className="text-3xl font-bold text-primary">{loadingStats ? "..." : stat.value}</div>
                       <div className={`p-3 bg-gray-100 rounded-lg ${stat.color}`}>
                         <Icon size={24} />
                       </div>
@@ -123,9 +163,7 @@ const AdminDashboard = () => {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap ${
-                      activeTab === tab.id
-                        ? "border-primary text-primary"
-                        : "border-transparent text-gray-600 hover:text-primary"
+                      activeTab === tab.id ? "border-primary text-primary" : "border-transparent text-gray-600 hover:text-primary"
                     }`}
                   >
                     <Icon size={18} />
@@ -149,19 +187,19 @@ const AdminDashboard = () => {
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600">Revenue Today</span>
-                        <span className="font-bold text-primary">$24,500</span>
+                        <span className="font-bold text-primary">${statsData?.revenueToday ?? "—"}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600">Active Deliveries</span>
-                        <span className="font-bold text-primary">342</span>
+                        <span className="font-bold text-primary">{statsData?.pendingShipments ?? "—"}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600">Avg Delivery Time</span>
-                        <span className="font-bold text-primary">2.4 hours</span>
+                        <span className="font-bold text-primary">—</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600">Satisfaction Rate</span>
-                        <span className="font-bold text-green-600">98.7%</span>
+                        <span className="font-bold text-green-600">—</span>
                       </div>
                     </div>
                   </CardContent>
@@ -217,11 +255,7 @@ const AdminDashboard = () => {
                             className="border-primary/30"
                             required
                           />
-                          <Input
-                            placeholder="Sender Phone"
-                            type="tel"
-                            className="border-primary/30"
-                          />
+                          <Input placeholder="Sender Phone" type="tel" className="border-primary/30" />
                         </div>
                       </div>
 
@@ -314,13 +348,15 @@ const AdminDashboard = () => {
                               <td className="py-3 px-2">{pkg.sender}</td>
                               <td className="py-3 px-2">{pkg.receiver}</td>
                               <td className="py-3 px-2">
-                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                  pkg.status === "Delivered"
-                                    ? "bg-green-100 text-green-800"
-                                    : pkg.status === "In Transit"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-yellow-100 text-yellow-800"
-                                }`}>
+                                <span
+                                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                    pkg.status === "Delivered"
+                                      ? "bg-green-100 text-green-800"
+                                      : pkg.status === "In Transit"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                                  }`}
+                                >
                                   {pkg.status}
                                 </span>
                               </td>
