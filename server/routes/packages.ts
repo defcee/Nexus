@@ -1,211 +1,173 @@
 import { RequestHandler } from "express";
-
-interface TrackingHistory {
-  id: number;
-  trackingNumber: string;
-  location: string;
-  status: string;
-  updatedAt: Date;
-}
-
-interface Package {
-  id: number;
-  trackingNumber: string;
-  senderName: string;
-  receiverName: string;
-  receiverAddress: string;
-  receiverPhone: string;
-  packageType: string;
-  weight: number;
-  price: number;
-  status: "Pending" | "Picked Up" | "In Transit" | "Out for Delivery" | "Delivered";
-  currentLocation: string;
-  eta: Date;
-  createdAt: Date;
-  history: TrackingHistory[];
-}
-
-let packages: Package[] = [
-  {
-    id: 1,
-    trackingNumber: "NEX1234567890",
-    senderName: "John Doe",
-    receiverName: "Jane Smith",
-    receiverAddress: "123 Main St, Lagos, Nigeria",
-    receiverPhone: "08012345678",
-    packageType: "Electronics",
-    weight: 2.5,
-    price: 5500,
-    status: "In Transit",
-    currentLocation: "Lagos, Nigeria",
-    eta: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    history: [
-      {
-        id: 1,
-        trackingNumber: "NEX1234567890",
-        location: "Port Harcourt, Nigeria",
-        status: "Pending",
-        updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: 2,
-        trackingNumber: "NEX1234567890",
-        location: "Port Harcourt, Nigeria",
-        status: "Picked Up",
-        updatedAt: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: 3,
-        trackingNumber: "NEX1234567890",
-        location: "Enugu, Nigeria",
-        status: "In Transit",
-        updatedAt: new Date(Date.now() - 0.5 * 24 * 60 * 60 * 1000),
-      },
-    ],
-  },
-];
-
-let packageIdCounter = 2;
-let historyIdCounter = 4;
+import { pool } from "../db";
 
 const generateTrackingNumber = (): string => {
   return "NEX" + Math.random().toString().slice(2, 12);
 };
 
-export const handleCreatePackage: RequestHandler = (req, res) => {
-  const {
-    senderName,
-    receiverName,
-    receiverAddress,
-    receiverPhone,
-    packageType,
-    weight,
-    price,
-  } = req.body;
+export const handleCreatePackage: RequestHandler = async (req, res) => {
+  try {
+    const {
+      senderName,
+      receiverName,
+      receiverAddress,
+      receiverPhone,
+      packageType,
+      weight,
+      price,
+    } = req.body;
 
-  if (
-    !senderName ||
-    !receiverName ||
-    !receiverAddress ||
-    !receiverPhone ||
-    !packageType ||
-    !weight ||
-    !price
-  ) {
-    return res.status(400).json({ error: "All fields are required" });
+    if (
+      !senderName ||
+      !receiverName ||
+      !receiverAddress ||
+      !receiverPhone ||
+      !packageType ||
+      !weight ||
+      !price
+    ) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    const trackingNumber = generateTrackingNumber();
+
+    const [result] = await pool.query(
+      `INSERT INTO packages (trackingNumber, senderName, receiverName, receiverAddress, receiverPhone, packageType, weight, price, status, currentLocation, eta)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        trackingNumber,
+        senderName,
+        receiverName,
+        receiverAddress,
+        receiverPhone,
+        packageType,
+        parseFloat(weight),
+        parseFloat(price),
+        "Pending",
+        "Warehouse",
+        null,
+      ]
+    );
+
+    const insertId = (result as any).insertId;
+
+    // Insert initial history
+    await pool.query(
+      `INSERT INTO package_history (trackingNumber, location, status) VALUES (?, ?, ?)`,
+      [trackingNumber, "Warehouse", "Pending"]
+    );
+
+    const [rows] = await pool.query("SELECT * FROM packages WHERE id = ?", [insertId]);
+    const pkg = Array.isArray(rows) ? rows[0] : rows;
+
+    res.status(201).json({ message: "Package created successfully", package: pkg });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
-
-  const newPackage: Package = {
-    id: packageIdCounter++,
-    trackingNumber: generateTrackingNumber(),
-    senderName,
-    receiverName,
-    receiverAddress,
-    receiverPhone,
-    packageType,
-    weight: parseFloat(weight),
-    price: parseFloat(price),
-    status: "Pending",
-    currentLocation: "Warehouse",
-    eta: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-    createdAt: new Date(),
-    history: [
-      {
-        id: historyIdCounter++,
-        trackingNumber: "",
-        location: "Warehouse",
-        status: "Pending",
-        updatedAt: new Date(),
-      },
-    ],
-  };
-
-  newPackage.history[0].trackingNumber = newPackage.trackingNumber;
-
-  packages.push(newPackage);
-
-  res.status(201).json({
-    message: "Package created successfully",
-    package: newPackage,
-  });
 };
 
-export const handleTrackPackage: RequestHandler = (req, res) => {
-  const { trackingNumber } = req.params;
+export const handleTrackPackage: RequestHandler = async (req, res) => {
+  try {
+    const { trackingNumber } = req.params;
 
-  const pkg = packages.find(
-    (p) => p.trackingNumber.toUpperCase() === trackingNumber.toUpperCase()
-  );
+    const [rows] = await pool.query("SELECT * FROM packages WHERE trackingNumber = ?", [
+      trackingNumber,
+    ]);
 
-  if (!pkg) {
-    return res.status(404).json({ error: "Tracking number not found" });
+    const pkg = Array.isArray(rows) ? rows[0] : rows;
+
+    if (!pkg) {
+      return res.status(404).json({ error: "Tracking number not found" });
+    }
+
+    const [historyRows] = await pool.query(
+      "SELECT * FROM package_history WHERE trackingNumber = ? ORDER BY updatedAt ASC",
+      [trackingNumber]
+    );
+
+    res.json({
+      trackingNumber: pkg.trackingNumber,
+      sender: pkg.senderName,
+      receiver: pkg.receiverName,
+      status: pkg.status,
+      eta: pkg.eta,
+      currentLocation: pkg.currentLocation,
+      weight: `${pkg.weight} kg`,
+      price: `$${pkg.price}`,
+      history: Array.isArray(historyRows) ? historyRows : [],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
-
-  res.json({
-    trackingNumber: pkg.trackingNumber,
-    sender: pkg.senderName,
-    receiver: pkg.receiverName,
-    status: pkg.status,
-    eta: pkg.eta,
-    currentLocation: pkg.currentLocation,
-    weight: `${pkg.weight} kg`,
-    price: `$${pkg.price}`,
-    history: pkg.history,
-  });
 };
 
-export const handleUpdatePackageStatus: RequestHandler = (req, res) => {
-  const { trackingNumber } = req.params;
-  const { status, location } = req.body;
+export const handleUpdatePackageStatus: RequestHandler = async (req, res) => {
+  try {
+    const { trackingNumber } = req.params;
+    const { status, location } = req.body;
 
-  const pkg = packages.find(
-    (p) => p.trackingNumber.toUpperCase() === trackingNumber.toUpperCase()
-  );
+    const [rows] = await pool.query("SELECT * FROM packages WHERE trackingNumber = ?", [
+      trackingNumber,
+    ]);
 
-  if (!pkg) {
-    return res.status(404).json({ error: "Package not found" });
+    const pkg = Array.isArray(rows) ? rows[0] : rows;
+    if (!pkg) {
+      return res.status(404).json({ error: "Package not found" });
+    }
+
+    await pool.query("UPDATE packages SET status = ?, currentLocation = ? WHERE trackingNumber = ?", [
+      status,
+      location,
+      trackingNumber,
+    ]);
+
+    await pool.query(
+      "INSERT INTO package_history (trackingNumber, location, status) VALUES (?, ?, ?)",
+      [trackingNumber, location, status]
+    );
+
+    const [updatedRows] = await pool.query("SELECT * FROM packages WHERE trackingNumber = ?", [
+      trackingNumber,
+    ]);
+
+    res.json({ message: "Package status updated", package: Array.isArray(updatedRows) ? updatedRows[0] : updatedRows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
-
-  pkg.status = status;
-  pkg.currentLocation = location;
-
-  // Add to history
-  pkg.history.push({
-    id: historyIdCounter++,
-    trackingNumber: pkg.trackingNumber,
-    location,
-    status,
-    updatedAt: new Date(),
-  });
-
-  res.json({
-    message: "Package status updated",
-    package: pkg,
-  });
 };
 
-export const handleGetAllPackages: RequestHandler = (req, res) => {
-  res.json({
-    packages: packages.map((p) => ({
-      id: p.id,
-      trackingNumber: p.trackingNumber,
-      sender: p.senderName,
-      receiver: p.receiverName,
-      status: p.status,
-    })),
-  });
+export const handleGetAllPackages: RequestHandler = async (_req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT id, trackingNumber, senderName, receiverName, status FROM packages ORDER BY createdAt DESC"
+    );
+
+    res.json({ packages: Array.isArray(rows) ? rows : [] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
 };
 
-export const handleDeletePackage: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const index = packages.findIndex((p) => p.id === parseInt(id));
+export const handleDeletePackage: RequestHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [result] = await pool.query("DELETE FROM packages WHERE id = ?", [parseInt(id, 10)]);
 
-  if (index === -1) {
-    return res.status(404).json({ error: "Package not found" });
+    const affectedRows = (result as any).affectedRows || 0;
+    if (affectedRows === 0) {
+      return res.status(404).json({ error: "Package not found" });
+    }
+
+    // Optionally delete related history
+    await pool.query("DELETE FROM package_history WHERE trackingNumber NOT IN (SELECT trackingNumber FROM packages)");
+
+    res.json({ message: "Package deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
-
-  packages.splice(index, 1);
-
-  res.json({ message: "Package deleted successfully" });
 };
