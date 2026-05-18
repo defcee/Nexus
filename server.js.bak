@@ -18,7 +18,7 @@ app.use(process.env.HEALTH_PATH || '/health', (req, res) => {
 });
 
 // Serve index.html for SPA routes (including /admin)
-app.use((req, res) => {
+app.use('*', (req, res) => {
   const indexPath = path.join(distSpa, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.type('html').sendFile(indexPath);
