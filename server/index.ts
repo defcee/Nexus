@@ -66,7 +66,7 @@ export function createServer() {
 
   app.get("/api/demo", handleDemo);
 
-  // AUTH
+  // AUTH (public routes kept server-side but client UI will be removed)
   app.post("/api/signup", handleSignup);
   app.post("/api/login", handleLogin);
   app.get("/api/users/:id", handleGetProfile);
@@ -79,56 +79,38 @@ export function createServer() {
   app.put("/api/packages/:trackingNumber/status", handleUpdatePackageStatus);
   app.delete("/api/packages/:id", handleDeletePackage);
 
-  // ADMIN API
-  app.post("/api/admin/login", handleAdminLogin);
-  app.post("/api/admin/logout", handleAdminLogout);
-  app.get("/api/admin/stats", handleGetAdminStats);
-  app.get("/api/admin/chats", handleGetChatMessages);
-  app.post("/api/admin/chats", handleSaveChatMessage);
-  app.get("/api/admin/invoices", handleGetInvoices);
-  app.post("/api/admin/invoices", handleCreateInvoice);
+  // -------------------- ADMIN AUTH & ROUTES --------------------
 
-  // -------------------- ADMIN ROUTE PROTECTION --------------------
-  // If BASIC_AUTH_USER & BASIC_AUTH_PASSWORD are set, enforce Basic Auth for /admin.
-  // Otherwise fall back to referer-based direct-navigation guard (Option A).
-  app.use((req, res, next) => {
-    try {
-      if (req.path === "/admin" || req.path.startsWith("/admin/")) {
-        const BASIC_USER = process.env.BASIC_AUTH_USER;
-        const BASIC_PASS = process.env.BASIC_AUTH_PASSWORD;
-
-        if (BASIC_USER && BASIC_PASS) {
-          // Enforce Basic Auth
-          const auth = req.get("authorization") || "";
-          if (!auth.startsWith("Basic ")) {
-            res.setHeader("WWW-Authenticate", 'Basic realm="Admin"');
-            return res.status(401).send("Authentication required");
-          }
-
-          const b64 = auth.split(" ")[1] || "";
-          const decoded = Buffer.from(b64, "base64").toString("utf8");
-          const [user, pass] = decoded.split(":");
-          if (user !== BASIC_USER || pass !== BASIC_PASS) {
-            res.setHeader("WWW-Authenticate", 'Basic realm="Admin"');
-            return res.status(401).send("Invalid credentials");
-          }
-
-          // Basic auth passed
-          return next();
-        }
-
-        // Fallback: referer-based direct navigation (Option A)
-        const referer = req.get("referer") || "";
-        const host = req.get("host") || "";
-        const isDirect = !referer || !referer.includes(host);
-        if (!isDirect) {
-          return res.status(403).send("Forbidden");
-        }
-      }
-    } catch (err) {
-      console.warn("admin guard error", err);
+  // Simple admin token-based middleware used for protecting admin API endpoints
+  function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const authHeader = req.get("authorization") || "";
+    // Accept both Bearer and raw tokens
+    const token = authHeader.replace(/^Bearer\s+/i, "") || (req.headers["x-admin-token"] as string) || "";
+    if (!token || !token.startsWith("admin-token-")) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
+    // Attach adminId for handlers if needed
+    const idStr = token.replace("admin-token-", "");
+    (req as any).adminId = parseInt(idStr, 10) || 0;
     next();
+  }
+
+  // Admin login remains public (uses DB first, falls back to ADMIN_USERNAME/ADMIN_PASSWORD env)
+  app.post("/api/admin/login", handleAdminLogin);
+
+  // Protect all other admin API endpoints
+  app.post("/api/admin/logout", requireAdminAuth, handleAdminLogout);
+  app.get("/api/admin/stats", requireAdminAuth, handleGetAdminStats);
+  app.get("/api/admin/chats", requireAdminAuth, handleGetChatMessages);
+  app.post("/api/admin/chats", requireAdminAuth, handleSaveChatMessage);
+  app.get("/api/admin/invoices", requireAdminAuth, handleGetInvoices);
+  app.post("/api/admin/invoices", requireAdminAuth, handleCreateInvoice);
+
+  // -------------------- REMOVE/REDIRECT PUBLIC LOGIN & SIGNUP UI --------------------
+  // The frontend login/signup routes are removed from the client. For safety, redirect those
+  // requests to /admin so users land on the admin-only login page.
+  app.get(["/login", "/signup", "/auth/login", "/auth/signup"], (_req, res) => {
+    return res.redirect(302, "/admin");
   });
 
   // -------------------- FRONTEND --------------------
@@ -137,7 +119,7 @@ export function createServer() {
 
   app.use(express.static(spaPath));
 
-  // FIXED FOR EXPRESS 5 (NO "*")
+  // Serve index.html for SPA routes including /admin so the client-side admin UI can boot.
   app.use((_req, res) => {
     res.sendFile(path.join(spaPath, "index.html"));
   });
