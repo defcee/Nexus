@@ -34,13 +34,13 @@ export default function Contact() {
     {
       icon: Phone,
       title: "Phone",
-      details: "08104728835",
+      details: "+1 (909) 496-7913",
       image: "/assets/contact-phone.jpg"
     },
     {
       icon: Mail,
       title: "Email",
-      details: "support@nexusglobalparcel.com",
+      details: "support@nexusglog.com",
       image: "/assets/contact-email.jpg"
     },
     
