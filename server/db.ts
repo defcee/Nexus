@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { createPool, Pool } from "mysql2/promise";
+import { createPool } from "mysql2/promise";
 
 const {
   MYSQL_HOST,
@@ -7,29 +7,20 @@ const {
   MYSQL_USER,
   MYSQL_PASSWORD,
   MYSQL_DATABASE,
-  DB_HOST,
-  DB_PORT,
-  DB_USER,
-  DB_PASSWORD,
-  DB_NAME,
 } = process.env;
 
-// Support both MYSQL_* and DB_* env var formats (cPanel often uses DB_*)
-const host = MYSQL_HOST || DB_HOST || "localhost";
-const port = MYSQL_PORT ? parseInt(MYSQL_PORT, 10) : DB_PORT ? parseInt(DB_PORT, 10) : 3306;
-const user = MYSQL_USER || DB_USER || "";
-const password = MYSQL_PASSWORD || DB_PASSWORD || "";
-const database = MYSQL_DATABASE || DB_NAME || "";
+if (!MYSQL_HOST || !MYSQL_USER || !MYSQL_DATABASE) {
+  // It's okay to allow missing env vars in development, but warn
+  console.warn("MySQL env vars not fully set. Set MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE in production.");
+}
 
-const pool: Pool = createPool({
-  host,
-  port,
-  user,
-  password,
-  database,
+export const pool = createPool({
+  host: MYSQL_HOST || "localhost",
+  port: MYSQL_PORT ? parseInt(MYSQL_PORT, 10) : 3306,
+  user: MYSQL_USER || "",
+  password: MYSQL_PASSWORD || "",
+  database: MYSQL_DATABASE || "",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
 });
-
-export { pool };

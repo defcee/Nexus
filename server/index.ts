@@ -49,15 +49,17 @@ export function createServer() {
 
   app.get("/api/db-test", async (_req, res) => {
     try {
-      const result = await pool.query("SELECT NOW()");
+      // mysql2/promise returns [rows, fields]
+      const [rows] = await pool.query("SELECT NOW() AS now");
       res.json({
         message: "Database connected successfully",
-        time: result.rows[0],
+        time: Array.isArray(rows) && rows.length ? rows[0] : rows,
       });
     } catch (error) {
       console.error("DB connection error:", error);
       res.status(500).json({
         message: "Database connection failed",
+        error: (error as Error).message,
       });
     }
   });
@@ -85,6 +87,27 @@ export function createServer() {
   app.post("/api/admin/chats", handleSaveChatMessage);
   app.get("/api/admin/invoices", handleGetInvoices);
   app.post("/api/admin/invoices", handleCreateInvoice);
+
+  // -------------------- ADMIN ROUTE DIRECT-NAVIGATION GUARD --------------------
+  // Option A: Allow /admin only on direct navigation (no referer) or when referer is external.
+  // This is a best-effort client-side navigation guard implemented server-side.
+  app.use((req, res, next) => {
+    try {
+      if (req.path === "/admin" || req.path.startsWith("/admin/")) {
+        const referer = req.get("referer") || "";
+        const host = req.get("host") || "";
+        const isDirect = !referer || !referer.includes(host);
+        if (!isDirect) {
+          // Send 403 to block navigations coming from same-site links
+          return res.status(403).send("Forbidden");
+        }
+      }
+    } catch (err) {
+      // If anything goes wrong, allow the request to proceed to avoid accidental lockout
+      console.warn("admin guard error", err);
+    }
+    next();
+  });
 
   // -------------------- FRONTEND --------------------
 
