@@ -27,17 +27,10 @@ const Header = () => {
             alt="Nexus Global Parcel Logo"
             className="w-8 h-8 object-contain"
             onError={(e) => {
-              // Fallback to generated logo if image not found
-              e.currentTarget.style.display = 'none';
-              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              e.currentTarget.style.display = "none";
+              e.currentTarget.nextElementSibling?.classList.remove("hidden");
             }}
           />
-          <div
-            className="w-8 h-8 bg-primary rounded flex items-center justify-center"
-            style={{ display: 'none' }}
-          >
-            <div className="w-4 h-4 bg-secondary rounded-sm transform -rotate-45" />
-          </div>
           <div className="hidden sm:block">
             <div className="text-lg font-bold text-primary">NEXUS</div>
             <div className="text-xs text-secondary font-semibold">GLOBAL PARCEL</div>
@@ -57,17 +50,12 @@ const Header = () => {
           ))}
         </nav>
 
-        {/* Auth Buttons and Language */}
+        {/* Admin Button and Language */}
         <div className="hidden md:flex items-center gap-6">
           <LanguageSelector />
           <div className="flex items-center gap-2 border-l border-gray-300 pl-6">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">
-                {t("nav.login")}
-              </Button>
-            </Link>
-            <Link to="/signup">
-              <Button size="sm">{t("nav.signup")}</Button>
+            <Link to="/admin">
+              <Button size="sm">Admin</Button>
             </Link>
           </div>
         </div>
@@ -96,13 +84,8 @@ const Header = () => {
               </Link>
             ))}
             <div className="pt-3 border-t border-primary/20 space-y-2">
-              <Link to="/login" onClick={() => setIsOpen(false)}>
-                <Button variant="outline" className="w-full">
-                  Login
-                </Button>
-              </Link>
-              <Link to="/signup" onClick={() => setIsOpen(false)}>
-                <Button className="w-full">Sign Up</Button>
+              <Link to="/admin" onClick={() => setIsOpen(false)}>
+                <Button className="w-full">Admin</Button>
               </Link>
             </div>
           </div>
