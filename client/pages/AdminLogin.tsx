@@ -62,10 +62,16 @@ export default function AdminLogin() {
         body: JSON.stringify(formData),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
+        // store token for subsequent admin API requests
+        if (data?.token) {
+          localStorage.setItem("admin_token", data.token);
+        }
         navigate("/admin/dashboard");
       } else {
-        setErrors({ submit: "Invalid username or password" });
+        setErrors({ submit: data?.error || "Invalid username or password" });
       }
     } catch {
       setErrors({ submit: "An error occurred. Please try again." });
@@ -79,7 +85,6 @@ export default function AdminLogin() {
       <section className="min-h-[calc(100vh-8rem)] py-12 bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="container max-w-md">
           <div className="bg-white rounded-2xl p-8 shadow-lg">
-
             {/* Icon */}
             <div className="flex items-center justify-center mb-8">
               <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
@@ -89,12 +94,8 @@ export default function AdminLogin() {
 
             {/* Title */}
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-primary mb-2">
-                Admin Portal
-              </h1>
-              <p className="text-gray-600 text-sm">
-                Restricted Access
-              </p>
+              <h1 className="text-3xl font-bold text-primary mb-2">Admin Portal</h1>
+              <p className="text-gray-600 text-sm">Restricted Access</p>
             </div>
 
             {/* Error */}
@@ -109,17 +110,11 @@ export default function AdminLogin() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-
               {/* Username */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Username
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
                 <div className="relative">
-                  <User
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                    size={18}
-                  />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                   <Input
                     type="text"
                     name="username"
@@ -128,23 +123,14 @@ export default function AdminLogin() {
                     className={`pl-10 ${errors.username ? "border-red-500" : ""}`}
                   />
                 </div>
-                {errors.username && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {errors.username}
-                  </p>
-                )}
+                {errors.username && <p className="text-red-600 text-sm mt-1">{errors.username}</p>}
               </div>
 
               {/* Password */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
                 <div className="relative">
-                  <Lock
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                    size={18}
-                  />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                   <Input
                     type="password"
                     name="password"
@@ -153,19 +139,11 @@ export default function AdminLogin() {
                     className={`pl-10 ${errors.password ? "border-red-500" : ""}`}
                   />
                 </div>
-                {errors.password && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {errors.password}
-                  </p>
-                )}
+                {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password}</p>}
               </div>
 
               {/* Submit */}
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full gap-2 bg-primary hover:bg-primary/90"
-              >
+              <Button type="submit" disabled={loading} className="w-full gap-2 bg-primary hover:bg-primary/90">
                 {loading ? "Authenticating..." : "Login to Admin Panel"}
                 <ArrowRight size={18} />
               </Button>
