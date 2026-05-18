@@ -64,7 +64,7 @@ export function createServer() {
 
   app.get("/api/demo", handleDemo);
 
-  // AUTH
+  // AUTH (public routes kept server-side but client UI will be removed)
   app.post("/api/signup", handleSignup);
   app.post("/api/login", handleLogin);
   app.get("/api/users/:id", handleGetProfile);
@@ -77,25 +77,49 @@ export function createServer() {
   app.put("/api/packages/:trackingNumber/status", handleUpdatePackageStatus);
   app.delete("/api/packages/:id", handleDeletePackage);
 
-  // ADMIN API
-  app.post("/api/admin/login", handleAdminLogin);
-  app.post("/api/admin/logout", handleAdminLogout);
-  app.get("/api/admin/stats", handleGetAdminStats);
-  app.get("/api/admin/chats", handleGetChatMessages);
-  app.post("/api/admin/chats", handleSaveChatMessage);
-  app.get("/api/admin/invoices", handleGetInvoices);
-  app.post("/api/admin/invoices", handleCreateInvoice);
+  // -------------------- ADMIN AUTH & ROUTES --------------------
 
-  // -------------------- STATIC FRONTEND --------------------
+
+  // Simple admin token-based middleware used for protecting admin API endpoints
+  function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const authHeader = req.get("authorization") || "";
+    // Accept both Bearer and raw tokens
+    const token = authHeader.replace(/^Bearer\s+/i, "") || (req.headers["x-admin-token"] as string) || "";
+    if (!token || !token.startsWith("admin-token-")) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    // Attach adminId for handlers if needed
+    const idStr = token.replace("admin-token-", "");
+    (req as any).adminId = parseInt(idStr, 10) || 0;
+    next();
+  }
+
+  // Admin login remains public (uses DB first, falls back to ADMIN_USERNAME/ADMIN_PASSWORD env)
+  app.post("/api/admin/login", handleAdminLogin);
+
+  // Protect all other admin API endpoints
+  app.post("/api/admin/logout", requireAdminAuth, handleAdminLogout);
+  app.get("/api/admin/stats", requireAdminAuth, handleGetAdminStats);
+  app.get("/api/admin/chats", requireAdminAuth, handleGetChatMessages);
+  app.post("/api/admin/chats", requireAdminAuth, handleSaveChatMessage);
+  app.get("/api/admin/invoices", requireAdminAuth, handleGetInvoices);
+  app.post("/api/admin/invoices", requireAdminAuth, handleCreateInvoice);
+
+  // -------------------- REMOVE/REDIRECT PUBLIC LOGIN & SIGNUP UI --------------------
+  // The frontend login/signup routes are removed from the client. For safety, redirect those
+  // requests to /admin so users land on the admin-only login page.
+  app.get(["/login", "/signup", "/auth/login", "/auth/signup"], (_req, res) => {
+    return res.redirect(302, "/admin");
+  });
+
+  // -------------------- FRONTEND --------------------
+
+
   const spaPath = path.join(process.cwd(), "dist", "spa");
 
   // Serve static files first
   app.use(express.static(spaPath));
 
-  // -------------------- SPA FALLBACK (FIXED) --------------------
-  app.get("*", (req, res, next) => {
-    // Never intercept API routes
-    if (req.path.startsWith("/api")) return next();
 
     res.sendFile(path.join(spaPath, "index.html"));
   });
