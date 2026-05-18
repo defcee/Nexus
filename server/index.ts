@@ -79,7 +79,7 @@ export function createServer() {
   app.put("/api/packages/:trackingNumber/status", handleUpdatePackageStatus);
   app.delete("/api/packages/:id", handleDeletePackage);
 
-  // ADMIN
+  // ADMIN API
   app.post("/api/admin/login", handleAdminLogin);
   app.post("/api/admin/logout", handleAdminLogout);
   app.get("/api/admin/stats", handleGetAdminStats);
@@ -88,22 +88,44 @@ export function createServer() {
   app.get("/api/admin/invoices", handleGetInvoices);
   app.post("/api/admin/invoices", handleCreateInvoice);
 
-  // -------------------- ADMIN ROUTE DIRECT-NAVIGATION GUARD --------------------
-  // Option A: Allow /admin only on direct navigation (no referer) or when referer is external.
-  // This is a best-effort client-side navigation guard implemented server-side.
+  // -------------------- ADMIN ROUTE PROTECTION --------------------
+  // If BASIC_AUTH_USER & BASIC_AUTH_PASSWORD are set, enforce Basic Auth for /admin.
+  // Otherwise fall back to referer-based direct-navigation guard (Option A).
   app.use((req, res, next) => {
     try {
       if (req.path === "/admin" || req.path.startsWith("/admin/")) {
+        const BASIC_USER = process.env.BASIC_AUTH_USER;
+        const BASIC_PASS = process.env.BASIC_AUTH_PASSWORD;
+
+        if (BASIC_USER && BASIC_PASS) {
+          // Enforce Basic Auth
+          const auth = req.get("authorization") || "";
+          if (!auth.startsWith("Basic ")) {
+            res.setHeader("WWW-Authenticate", 'Basic realm="Admin"');
+            return res.status(401).send("Authentication required");
+          }
+
+          const b64 = auth.split(" ")[1] || "";
+          const decoded = Buffer.from(b64, "base64").toString("utf8");
+          const [user, pass] = decoded.split(":");
+          if (user !== BASIC_USER || pass !== BASIC_PASS) {
+            res.setHeader("WWW-Authenticate", 'Basic realm="Admin"');
+            return res.status(401).send("Invalid credentials");
+          }
+
+          // Basic auth passed
+          return next();
+        }
+
+        // Fallback: referer-based direct navigation (Option A)
         const referer = req.get("referer") || "";
         const host = req.get("host") || "";
         const isDirect = !referer || !referer.includes(host);
         if (!isDirect) {
-          // Send 403 to block navigations coming from same-site links
           return res.status(403).send("Forbidden");
         }
       }
     } catch (err) {
-      // If anything goes wrong, allow the request to proceed to avoid accidental lockout
       console.warn("admin guard error", err);
     }
     next();
