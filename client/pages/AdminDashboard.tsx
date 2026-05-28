@@ -2,84 +2,23 @@ console.log("🔥 NEW ADMIN DASHBOARD LOADED");
 
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import {
-  Package,
-  Users,
-  BarChart3,
-  MessageSquare,
-  FileText,
-  Plus,
-  Edit2,
-  Trash2,
-  LogOut,
-  TrendingUp,
-} from "lucide-react";
-
+import { Plus, Edit2, Trash2, LogOut } from "lucide-react";
 import { adminAPI, packageAPI } from "@/lib/api";
 
-// ✅ SAFE LOGO (works in production)
+// ✅ SAFE LOGO (Vite + production safe)
 const logoUrl = "/logo.png";
-
-// =======================================
-// PDF GENERATION (INVOICE)
-// =======================================
-const downloadInvoice = (invoice: any) => {
-  const win = window.open("", "_blank");
-
-  if (!win) return;
-
-  win.document.write(`
-    <html>
-      <head>
-        <title>Invoice</title>
-        <style>
-          body { font-family: Arial; padding: 40px; }
-          .header { display:flex; justify-content:space-between; align-items:center; }
-          .logo { width:120px; }
-          .box { margin-top:20px; padding:20px; border:1px solid #ddd; }
-          .row { margin:10px 0; }
-          .total { font-size:20px; font-weight:bold; margin-top:20px; }
-        </style>
-      </head>
-      <body>
-
-        <div class="header">
-          <img class="logo" src="${logoUrl}" />
-          <h2>INVOICE</h2>
-        </div>
-
-        <div class="box">
-          <div class="row"><b>Tracking:</b> ${invoice.tracking_number}</div>
-          <div class="row"><b>User ID:</b> ${invoice.user_id ?? "N/A"}</div>
-          <div class="row"><b>Date:</b> ${new Date(invoice.created_at).toLocaleString()}</div>
-        </div>
-
-        <div class="box">
-          <div class="row"><b>Total Amount:</b> $${invoice.total_amount}</div>
-        </div>
-
-        <script>
-          window.print();
-        </script>
-
-      </body>
-    </html>
-  `);
-
-  win.document.close();
-};
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState("overview");
   const [packages, setPackages] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const [stats, setStats] = useState({
     totalShipments: 0,
@@ -106,16 +45,8 @@ const AdminDashboard = () => {
     location: "",
   });
 
-  const allowedStatuses = [
-    "Pending",
-    "On Transit",
-    "On Hold",
-    "Arrived",
-    "Delivered",
-  ];
-
   // ===============================
-  // AUTH
+  // AUTH CHECK
   // ===============================
   useEffect(() => {
     const token = localStorage.getItem("admin_token");
@@ -128,6 +59,8 @@ const AdminDashboard = () => {
   useEffect(() => {
     const load = async () => {
       try {
+        setLoading(true);
+
         const statsRes = await adminAPI.getStats();
         const pkgRes = await packageAPI.getAll();
         const invoiceRes = await adminAPI.getInvoices();
@@ -136,7 +69,9 @@ const AdminDashboard = () => {
         setPackages(pkgRes?.packages || []);
         setInvoices(invoiceRes?.invoices || []);
       } catch (err) {
-        console.error(err);
+        console.error("LOAD ERROR:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -144,7 +79,7 @@ const AdminDashboard = () => {
   }, []);
 
   // ===============================
-  // CREATE PACKAGE + AUTO INVOICE
+  // CREATE PACKAGE + INVOICE
   // ===============================
   const handleCreatePackage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,24 +88,27 @@ const AdminDashboard = () => {
       const res = await packageAPI.create(formData);
       const newPkg = res?.package;
 
-      if (newPkg) {
-        setPackages((prev) => [newPkg, ...prev]);
+      if (!newPkg) return;
 
-        // AUTO INVOICE (backend)
-        const invoice = await adminAPI.createInvoice({
+      setPackages((prev) => [newPkg, ...prev]);
+
+      // 🔥 CREATE INVOICE (FIXED)
+      try {
+        const invoiceRes = await adminAPI.createInvoice({
           trackingNumber: newPkg.tracking_number,
-          userId: null, // ✅ FIX: optional
+          userId: null, // optional FIXED
           totalAmount: newPkg.price,
+          invoiceFile: `invoice-${newPkg.tracking_number}.pdf`,
         });
 
-        if (invoice?.invoice) {
-          setInvoices((prev) => [invoice.invoice, ...prev]);
-
-          // Auto download invoice
-          downloadInvoice(invoice.invoice);
+        if (invoiceRes?.invoice) {
+          setInvoices((prev) => [invoiceRes.invoice, ...prev]);
         }
+      } catch (invoiceErr) {
+        console.error("❌ INVOICE FAILED:", invoiceErr);
       }
 
+      // reset form
       setFormData({
         sender_name: "",
         receiver_name: "",
@@ -181,12 +119,12 @@ const AdminDashboard = () => {
         price: "",
       });
     } catch (err) {
-      console.error(err);
+      console.error("CREATE PACKAGE ERROR:", err);
     }
   };
 
   // ===============================
-  // DELETE
+  // DELETE PACKAGE
   // ===============================
   const handleDelete = async (id: number) => {
     await packageAPI.delete(id);
@@ -197,6 +135,8 @@ const AdminDashboard = () => {
   // UPDATE STATUS
   // ===============================
   const submitEdit = async () => {
+    if (!editingPackage) return;
+
     const trackingNumber =
       editingPackage.tracking_number || editingPackage.trackingNumber;
 
@@ -225,7 +165,7 @@ const AdminDashboard = () => {
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-3">
               <img src={logoUrl} className="w-10 h-10" />
-              <h1>Admin Dashboard</h1>
+              <h1 className="text-xl font-bold">Admin Dashboard</h1>
             </div>
 
             <Button onClick={() => {
@@ -239,17 +179,17 @@ const AdminDashboard = () => {
 
           {/* STATS */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Card><CardContent>Total: ${stats.totalShipments}</CardContent></Card>
-            <Card><CardContent>Delivered: ${stats.deliveredShipments}</CardContent></Card>
-            <Card><CardContent>Pending: ${stats.pendingShipments}</CardContent></Card>
-            <Card><CardContent>Users: ${stats.totalUsers}</CardContent></Card>
+            <Card><CardContent>Total: {stats.totalShipments}</CardContent></Card>
+            <Card><CardContent>Delivered: {stats.deliveredShipments}</CardContent></Card>
+            <Card><CardContent>Pending: {stats.pendingShipments}</CardContent></Card>
+            <Card><CardContent>Users: {stats.totalUsers}</CardContent></Card>
             <Card><CardContent>Revenue: ${stats.revenueToday}</CardContent></Card>
           </div>
 
           {/* CREATE PACKAGE */}
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Create Package</CardTitle>
+              <CardTitle>Create Package + Invoice</CardTitle>
             </CardHeader>
 
             <CardContent>
@@ -269,7 +209,35 @@ const AdminDashboard = () => {
                   }
                 />
 
-                <Input placeholder="Price ($)"
+                <Input placeholder="Receiver Address"
+                  value={formData.receiver_address}
+                  onChange={(e) =>
+                    setFormData({ ...formData, receiver_address: e.target.value })
+                  }
+                />
+
+                <Input placeholder="Phone"
+                  value={formData.receiver_phone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, receiver_phone: e.target.value })
+                  }
+                />
+
+                <Input placeholder="Package Type"
+                  value={formData.package_type}
+                  onChange={(e) =>
+                    setFormData({ ...formData, package_type: e.target.value })
+                  }
+                />
+
+                <Input placeholder="Weight"
+                  value={formData.weight}
+                  onChange={(e) =>
+                    setFormData({ ...formData, weight: e.target.value })
+                  }
+                />
+
+                <Input placeholder="Price"
                   value={formData.price}
                   onChange={(e) =>
                     setFormData({ ...formData, price: e.target.value })
@@ -312,7 +280,6 @@ const AdminDashboard = () => {
                         <button onClick={() => setEditingPackage(p)}>
                           <Edit2 />
                         </button>
-
                         <button onClick={() => handleDelete(p.id)}>
                           <Trash2 />
                         </button>
@@ -321,18 +288,6 @@ const AdminDashboard = () => {
                   ))}
                 </tbody>
               </table>
-            </CardContent>
-          </Card>
-
-          {/* USERS SAFE EMPTY STATE */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Users</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-center text-gray-500">
-                No users yet (safe render)
-              </p>
             </CardContent>
           </Card>
 
