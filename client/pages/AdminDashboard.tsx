@@ -16,7 +16,7 @@ import { Plus, Edit2, Trash2, LogOut } from "lucide-react";
 
 import { adminAPI, packageAPI } from "@/lib/api";
 
-const logoUrl = "/logo.png";
+const logoUrl = "/assets/logo.png";
 
 /* =========================
    INVOICE DOWNLOAD
