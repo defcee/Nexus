@@ -12,12 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import {
-  Plus,
-  Edit2,
-  Trash2,
-  LogOut,
-} from "lucide-react";
+import { Plus, Edit2, Trash2, LogOut } from "lucide-react";
 
 import { adminAPI, packageAPI } from "@/lib/api";
 
@@ -35,27 +30,69 @@ const downloadInvoice = (invoice: any) => {
       <head>
         <title>Invoice</title>
         <style>
-          body { font-family: Arial; padding: 40px; }
-          .header { display:flex; justify-content:space-between; align-items:center; }
+          body { font-family: Arial; padding: 40px; background:#f5f5f5; }
+          .invoice { background:#fff; padding:30px; border-radius:10px; max-width:900px; margin:auto; }
+          .header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:15px; }
           .logo { width:120px; }
-          .box { margin-top:20px; padding:20px; border:1px solid #ddd; }
+          .section { margin-top:20px; padding:15px; border:1px solid #eee; border-radius:8px; }
+          .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+          .title { font-size:28px; font-weight:bold; }
+          table { width:100%; margin-top:20px; border-collapse:collapse; }
+          th, td { border:1px solid #ddd; padding:10px; }
+          th { background:#f3f3f3; }
+          .total { text-align:right; font-size:20px; margin-top:20px; font-weight:bold; }
         </style>
       </head>
       <body>
 
-        <div class="header">
-          <img src="${logoUrl}" class="logo" />
-          <h2>INVOICE</h2>
-        </div>
+        <div class="invoice">
 
-        <div class="box">
-          <p><b>Tracking:</b> ${invoice.tracking_number}</p>
-          <p><b>User ID:</b> ${invoice.user_id ?? "N/A"}</p>
-          <p><b>Date:</b> ${new Date(invoice.created_at).toLocaleString()}</p>
-        </div>
+          <div class="header">
+            <img src="${logoUrl}" class="logo" />
+            <div class="title">INVOICE</div>
+          </div>
 
-        <div class="box">
-          <p><b>Total Amount:</b> $${invoice.total_amount}</p>
+          <div class="grid">
+
+            <div class="section">
+              <h3>Sender</h3>
+              <p><b>Name:</b> ${invoice.sender_name || "N/A"}</p>
+              <p><b>Address:</b> ${invoice.sender_address || "N/A"}</p>
+            </div>
+
+            <div class="section">
+              <h3>Receiver</h3>
+              <p><b>Name:</b> ${invoice.receiver_name || "N/A"}</p>
+              <p><b>Address:</b> ${invoice.receiver_address || "N/A"}</p>
+            </div>
+
+          </div>
+
+          <div class="section">
+            <p><b>Tracking:</b> ${invoice.tracking_number}</p>
+            <p><b>Date:</b> ${new Date(invoice.created_at).toLocaleString()}</p>
+            <p><b>Status:</b> ${invoice.status || "Pending"}</p>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Shipping Fee</td>
+                <td>$${invoice.total_amount}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="total">
+            TOTAL: $${invoice.total_amount}
+          </div>
+
         </div>
 
         <script>window.print();</script>
@@ -88,6 +125,7 @@ export default function AdminDashboard() {
 
   const [formData, setFormData] = useState({
     sender_name: "",
+    sender_address: "",
     receiver_name: "",
     receiver_address: "",
     receiver_phone: "",
@@ -109,17 +147,11 @@ export default function AdminDashboard() {
     "Delivered",
   ];
 
-  /* =========================
-     AUTH CHECK
-  ========================= */
   useEffect(() => {
     const token = localStorage.getItem("admin_token");
     if (!token) navigate("/admin");
   }, [navigate]);
 
-  /* =========================
-     LOAD DATA
-  ========================= */
   useEffect(() => {
     const load = async () => {
       try {
@@ -138,9 +170,6 @@ export default function AdminDashboard() {
     load();
   }, []);
 
-  /* =========================
-     CREATE PACKAGE + INVOICE
-  ========================= */
   const handleCreatePackage = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -156,7 +185,11 @@ export default function AdminDashboard() {
         trackingNumber: newPkg.tracking_number,
         userId: null,
         totalAmount: Number(newPkg.price),
-        invoiceFile: `invoice-${newPkg.tracking_number}.pdf`,
+
+        sender_name: formData.sender_name,
+        sender_address: formData.sender_address,
+        receiver_name: formData.receiver_name,
+        receiver_address: formData.receiver_address,
       });
 
       if (invoiceRes?.invoice) {
@@ -166,6 +199,7 @@ export default function AdminDashboard() {
 
       setFormData({
         sender_name: "",
+        sender_address: "",
         receiver_name: "",
         receiver_address: "",
         receiver_phone: "",
@@ -179,17 +213,11 @@ export default function AdminDashboard() {
     }
   };
 
-  /* =========================
-     DELETE PACKAGE
-  ========================= */
   const handleDelete = async (id: number) => {
     await packageAPI.delete(id);
     setPackages((prev) => prev.filter((p) => p.id !== id));
   };
 
-  /* =========================
-     UPDATE STATUS
-  ========================= */
   const submitEdit = async () => {
     if (!editingPackage) return;
 
@@ -217,7 +245,6 @@ export default function AdminDashboard() {
       <section className="py-8">
         <div className="container">
 
-          {/* HEADER */}
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-3">
               <img src={logoUrl} className="w-10 h-10" />
@@ -235,7 +262,6 @@ export default function AdminDashboard() {
             </Button>
           </div>
 
-          {/* TABS */}
           <div className="flex gap-3 mb-6">
             <Button onClick={() => setActiveTab("overview")}>Overview</Button>
             <Button onClick={() => setActiveTab("packages")}>Packages</Button>
@@ -243,9 +269,6 @@ export default function AdminDashboard() {
             <Button onClick={() => setActiveTab("users")}>Users</Button>
           </div>
 
-          {/* =========================
-              OVERVIEW (CREATE)
-          ========================= */}
           {activeTab === "overview" && (
             <Card className="mb-6">
               <CardHeader>
@@ -261,6 +284,13 @@ export default function AdminDashboard() {
                     value={formData.sender_name}
                     onChange={(e) =>
                       setFormData({ ...formData, sender_name: e.target.value })
+                    }
+                  />
+
+                  <Input placeholder="Sender Address"
+                    value={formData.sender_address}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sender_address: e.target.value })
                     }
                   />
 
@@ -315,9 +345,6 @@ export default function AdminDashboard() {
             </Card>
           )}
 
-          {/* =========================
-              PACKAGES
-          ========================= */}
           {activeTab === "packages" && (
             <Card>
               <CardHeader>
@@ -358,9 +385,6 @@ export default function AdminDashboard() {
             </Card>
           )}
 
-          {/* =========================
-              INVOICES
-          ========================= */}
           {activeTab === "invoices" && (
             <Card>
               <CardHeader>
@@ -369,9 +393,7 @@ export default function AdminDashboard() {
 
               <CardContent>
                 {invoices.length === 0 ? (
-                  <p className="text-center text-gray-500">
-                    No invoices yet
-                  </p>
+                  <p className="text-center text-gray-500">No invoices yet</p>
                 ) : (
                   <table className="w-full text-sm">
                     <thead>
@@ -401,9 +423,6 @@ export default function AdminDashboard() {
             </Card>
           )}
 
-          {/* =========================
-              USERS (SAFE EMPTY)
-          ========================= */}
           {activeTab === "users" && (
             <Card>
               <CardHeader>
@@ -418,9 +437,6 @@ export default function AdminDashboard() {
             </Card>
           )}
 
-          {/* =========================
-              EDIT MODAL
-          ========================= */}
           {editingPackage && (
             <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
               <div className="bg-white p-6 rounded w-[400px]">

@@ -289,6 +289,11 @@ export const handleCreateInvoice: RequestHandler =
         trackingNumber,
         userId,
         totalAmount,
+
+        sender_name,
+        sender_address,
+        receiver_name,
+        receiver_address,
       } = req.body;
 
       if (
@@ -311,30 +316,45 @@ export const handleCreateInvoice: RequestHandler =
       const insertResult =
         await pool.query(
           `
-        INSERT INTO invoices
-        (
-          invoice_number,
-          tracking_number,
-          user_id,
-          total_amount,
-          status,
-          invoice_file_url,
-          created_at,
-          updated_at
-        )
-        VALUES
-        (
-          $1,$2,$3,$4,$5,$6,NOW(),NOW()
-        )
-        RETURNING *
-        `,
+          INSERT INTO invoices
+          (
+            invoice_number,
+            tracking_number,
+            user_id,
+            total_amount,
+
+            sender_name,
+            sender_address,
+            receiver_name,
+            receiver_address,
+
+            status,
+            invoice_file_url,
+            created_at,
+            updated_at
+          )
+          VALUES
+          (
+            $1,$2,$3,$4,
+            $5,$6,$7,$8,
+            $9,$10,
+            NOW(),NOW()
+          )
+          RETURNING *
+          `,
           [
             invoiceNumber,
             trackingNumber,
             userId || null,
             parseFloat(totalAmount),
+
+            sender_name || null,
+            sender_address || null,
+            receiver_name || null,
+            receiver_address || null,
+
             "Pending",
-            `invoice-${trackingNumber}.pdf`,
+            `invoice-${trackingNumber}.html`,
           ]
         );
 
