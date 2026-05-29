@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { handleContact } from "./routes/contact";
 
 import { pool } from "./db";
 
@@ -111,6 +112,9 @@ export function createServer() {
   app.post("/api/login", handleLogin);
   app.get("/api/users/:id", handleGetProfile);
   app.put("/api/users/:id", handleUpdateProfile);
+
+  // CONTACT ROUTE
+  app.post("/api/contact", handleContact);
 
   // ==============================
   // PACKAGE ROUTES
