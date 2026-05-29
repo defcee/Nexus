@@ -1,39 +1,26 @@
-import { RequestHandler } from "express";
-import { transporter } from "../mailer";
+import nodemailer from "nodemailer";
 
-export const handleContact: RequestHandler = async (req, res) => {
-  const { name, email, subject, message } = req.body;
+const port = Number(process.env.SMTP_PORT || 587);
+const secure = port === 465;
 
-  if (!name || !email || !message) {
-    return res.status(400).json({
-      error: "Name, email and message are required",
-    });
+export const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port,
+  secure,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
+
+// Debug connection (important on Render)
+transporter.verify((err) => {
+  if (err) {
+    console.error("❌ SMTP ERROR:", err);
+  } else {
+    console.log("✅ SMTP READY");
   }
-
-  try {
-    await transporter.sendMail({
-      from: `"Nexus Contact" <${process.env.SMTP_USER}>`,
-      to: process.env.SMTP_USER,
-      subject: subject || `New Contact Message from ${name}`,
-      text: `
-Name: ${name}
-Email: ${email}
-Subject: ${subject || "No subject"}
-
-Message:
-${message}
-      `,
-    });
-
-    return res.json({
-      success: true,
-      message: "Message sent successfully",
-    });
-  } catch (err) {
-    console.error("CONTACT EMAIL ERROR:", err);
-
-    return res.status(500).json({
-      error: "Failed to send email",
-    });
-  }
-};
+});
