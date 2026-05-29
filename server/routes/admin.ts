@@ -61,16 +61,10 @@ export const handleAdminLogin: RequestHandler = async (req, res) => {
       console.error("⚠️ Admin DB login failed", dbError);
     }
 
-    const ENV_USER =
-      process.env.ADMIN_USERNAME || "admin";
+    const ENV_USER = process.env.ADMIN_USERNAME || "admin";
+    const ENV_PASS = process.env.ADMIN_PASSWORD || "admin123";
 
-    const ENV_PASS =
-      process.env.ADMIN_PASSWORD || "admin123";
-
-    if (
-      username === ENV_USER &&
-      password === ENV_PASS
-    ) {
+    if (username === ENV_USER && password === ENV_PASS) {
       return res.status(200).json({
         success: true,
         message: "Admin login successful",
@@ -98,10 +92,7 @@ export const handleAdminLogin: RequestHandler = async (req, res) => {
 // ADMIN LOGOUT
 // =====================================================
 
-export const handleAdminLogout: RequestHandler = async (
-  _req,
-  res
-) => {
+export const handleAdminLogout: RequestHandler = async (_req, res) => {
   return res.json({
     success: true,
     message: "Logged out successfully",
@@ -112,122 +103,102 @@ export const handleAdminLogout: RequestHandler = async (
 // ADMIN STATS
 // =====================================================
 
-export const handleGetAdminStats: RequestHandler =
-  async (_req, res) => {
-    try {
-      const shipmentResult = await pool.query(`
-      SELECT COUNT(*) AS totalshipments
-      FROM packages
+export const handleGetAdminStats: RequestHandler = async (_req, res) => {
+  try {
+    const shipmentResult = await pool.query(`
+      SELECT COUNT(*) AS totalshipments FROM packages
     `);
 
-      const deliveredResult = await pool.query(
-        `
+    const deliveredResult = await pool.query(
+      `
       SELECT COUNT(*) AS deliveredshipments
       FROM packages
       WHERE status = $1
       `,
-        ["Delivered"]
-      );
+      ["Delivered"]
+    );
 
-      const userResult = await pool.query(`
-      SELECT COUNT(*) AS totalusers
-      FROM users
+    const userResult = await pool.query(`
+      SELECT COUNT(*) AS totalusers FROM users
     `);
 
-      const pendingResult = await pool.query(
-        `
+    const pendingResult = await pool.query(
+      `
       SELECT COUNT(*) AS pendingshipments
       FROM packages
       WHERE status != $1
       `,
-        ["Delivered"]
-      );
+      ["Delivered"]
+    );
 
-      const revenueResult = await pool.query(`
-      SELECT COALESCE(SUM(total_amount),0)
-      AS revenuetoday
+    const revenueResult = await pool.query(`
+      SELECT COALESCE(SUM(total_amount),0) AS revenuetoday
       FROM invoices
       WHERE DATE(created_at)=CURRENT_DATE
     `);
 
-      return res.json({
-        totalShipments: Number(
-          shipmentResult.rows[0].totalshipments
-        ),
-        deliveredShipments: Number(
-          deliveredResult.rows[0]
-            .deliveredshipments
-        ),
-        pendingShipments: Number(
-          pendingResult.rows[0]
-            .pendingshipments
-        ),
-        totalUsers: Number(
-          userResult.rows[0].totalusers
-        ),
-        revenueToday: Number(
-          revenueResult.rows[0].revenuetoday
-        ),
-      });
-    } catch (error) {
-      console.error(
-        "ADMIN STATS ERROR:",
-        error
-      );
+    return res.json({
+      totalShipments: Number(shipmentResult.rows[0].totalshipments),
+      deliveredShipments: Number(deliveredResult.rows[0].deliveredshipments),
+      pendingShipments: Number(pendingResult.rows[0].pendingshipments),
+      totalUsers: Number(userResult.rows[0].totalusers),
+      revenueToday: Number(revenueResult.rows[0].revenuetoday),
+    });
+  } catch (error) {
+    console.error("ADMIN STATS ERROR:", error);
 
-      return res.status(500).json({
-        error: "Failed to load admin stats",
-      });
-    }
-  };
+    return res.status(500).json({
+      error: "Failed to load admin stats",
+    });
+  }
+};
 
 // =====================================================
 // CHAT MESSAGES
 // =====================================================
 
-export const handleGetChatMessages: RequestHandler =
-  async (_req, res) => {
-    try {
-      const result = await pool.query(`
+export const handleGetChatMessages: RequestHandler = async (_req, res) => {
+  try {
+    const result = await pool.query(`
       SELECT *
       FROM chat_messages
       ORDER BY created_at ASC
     `);
 
-      return res.json({
-        messages: result.rows,
-      });
-    } catch (error) {
-      console.error(error);
+    return res.json({
+      messages: result.rows,
+    });
+  } catch (error) {
+    console.error(error);
 
-      return res.status(500).json({
-        error: "Failed to load chat messages",
+    return res.status(500).json({
+      error: "Failed to load chat messages",
+    });
+  }
+};
+
+// =====================================================
+// SAVE CHAT MESSAGE (FIXED FOR CUSTOMER + ADMIN)
+// =====================================================
+
+export const handleSaveChatMessage: RequestHandler = async (req, res) => {
+  try {
+    const { userId, message, sender } = req.body;
+
+    if (!message || !sender) {
+      return res.status(400).json({
+        error: "message and sender are required",
       });
     }
-  };
 
-// =====================================================
-// SAVE CHAT MESSAGE
-// =====================================================
+    // normalize sender to prevent bad frontend data
+    const cleanSender =
+      sender === "admin" || sender === "user"
+        ? sender
+        : "user";
 
-export const handleSaveChatMessage: RequestHandler =
-  async (req, res) => {
-    try {
-      const {
-        userId,
-        message,
-        sender,
-      } = req.body;
-
-      if (!message || !sender) {
-        return res.status(400).json({
-          error: "All fields are required",
-        });
-      }
-
-      const insertResult =
-        await pool.query(
-          `
+    const insertResult = await pool.query(
+      `
       INSERT INTO chat_messages
       (
         user_id,
@@ -237,141 +208,125 @@ export const handleSaveChatMessage: RequestHandler =
       VALUES ($1,$2,$3)
       RETURNING *
       `,
-          [userId || null, message, sender]
-        );
+      [userId || null, message, cleanSender]
+    );
 
-      return res.status(201).json({
-        success: true,
-        data: insertResult.rows[0],
-      });
-    } catch (error) {
-      console.error(error);
+    return res.status(201).json({
+      success: true,
+      data: insertResult.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
 
-      return res.status(500).json({
-        error: "Failed to save message",
-      });
-    }
-  };
+    return res.status(500).json({
+      error: "Failed to save message",
+    });
+  }
+};
 
 // =====================================================
 // GET INVOICES
 // =====================================================
 
-export const handleGetInvoices: RequestHandler =
-  async (_req, res) => {
-    try {
-      const result = await pool.query(`
+export const handleGetInvoices: RequestHandler = async (_req, res) => {
+  try {
+    const result = await pool.query(`
       SELECT *
       FROM invoices
       ORDER BY created_at DESC
     `);
 
-      return res.json({
-        invoices: result.rows,
-      });
-    } catch (error) {
-      console.error(error);
+    return res.json({
+      invoices: result.rows,
+    });
+  } catch (error) {
+    console.error(error);
 
-      return res.status(500).json({
-        error: "Failed to load invoices",
+    return res.status(500).json({
+      error: "Failed to load invoices",
+    });
+  }
+};
+
+// =====================================================
+// CREATE INVOICE
+// =====================================================
+
+export const handleCreateInvoice: RequestHandler = async (req, res) => {
+  try {
+    const {
+      trackingNumber,
+      userId,
+      totalAmount,
+
+      sender_name,
+      sender_address,
+      receiver_name,
+      receiver_address,
+    } = req.body;
+
+    if (!trackingNumber || !totalAmount) {
+      return res.status(400).json({
+        error: "Tracking number and total amount are required",
       });
     }
-  };
 
-// =====================================================
-// CREATE INVOICE (FULLY FIXED)
-// =====================================================
+    const invoiceNumber =
+      "INV-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
 
-export const handleCreateInvoice: RequestHandler =
-  async (req, res) => {
-    try {
-      const {
-        trackingNumber,
-        userId,
-        totalAmount,
+    const insertResult = await pool.query(
+      `
+      INSERT INTO invoices
+      (
+        invoice_number,
+        tracking_number,
+        user_id,
+        total_amount,
 
         sender_name,
         sender_address,
         receiver_name,
         receiver_address,
-      } = req.body;
 
-      if (
-        !trackingNumber ||
-        !totalAmount
-      ) {
-        return res.status(400).json({
-          error:
-            "Tracking number and total amount are required",
-        });
-      }
+        status,
+        invoice_file_url,
+        created_at,
+        updated_at
+      )
+      VALUES
+      (
+        $1,$2,$3,$4,
+        $5,$6,$7,$8,
+        $9,$10,
+        NOW(),NOW()
+      )
+      RETURNING *
+      `,
+      [
+        invoiceNumber,
+        trackingNumber,
+        userId || null,
+        parseFloat(totalAmount),
 
-      // unique invoice number
-      const invoiceNumber =
-        "INV-" +
-        Date.now() +
-        "-" +
-        Math.floor(Math.random() * 9999);
+        sender_name || null,
+        sender_address || null,
+        receiver_name || null,
+        receiver_address || null,
 
-      const insertResult =
-        await pool.query(
-          `
-          INSERT INTO invoices
-          (
-            invoice_number,
-            tracking_number,
-            user_id,
-            total_amount,
+        "Pending",
+        `invoice-${trackingNumber}.html`,
+      ]
+    );
 
-            sender_name,
-            sender_address,
-            receiver_name,
-            receiver_address,
+    return res.status(201).json({
+      success: true,
+      invoice: insertResult.rows[0],
+    });
+  } catch (error) {
+    console.error("CREATE INVOICE ERROR:", error);
 
-            status,
-            invoice_file_url,
-            created_at,
-            updated_at
-          )
-          VALUES
-          (
-            $1,$2,$3,$4,
-            $5,$6,$7,$8,
-            $9,$10,
-            NOW(),NOW()
-          )
-          RETURNING *
-          `,
-          [
-            invoiceNumber,
-            trackingNumber,
-            userId || null,
-            parseFloat(totalAmount),
-
-            sender_name || null,
-            sender_address || null,
-            receiver_name || null,
-            receiver_address || null,
-
-            "Pending",
-            `invoice-${trackingNumber}.html`,
-          ]
-        );
-
-      return res.status(201).json({
-        success: true,
-        invoice:
-          insertResult.rows[0],
-      });
-    } catch (error) {
-      console.error(
-        "CREATE INVOICE ERROR:",
-        error
-      );
-
-      return res.status(500).json({
-        error:
-          "Failed to create invoice",
-      });
-    }
-  };
+    return res.status(500).json({
+      error: "Failed to create invoice",
+    });
+  }
+};

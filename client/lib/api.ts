@@ -1,3 +1,5 @@
+import { use } from "react";
+
 // ============================================
 // NEXUS API CONFIG (PRODUCTION SAFE)
 // ============================================
@@ -17,21 +19,15 @@ function getToken() {
 
 // ============================================
 // NORMALIZE ENDPOINT
-// Prevents:
-// /api/api/packages
-// packages
-// /packages
 // ============================================
 
 function normalizeEndpoint(endpoint: string) {
   let clean = endpoint.trim();
 
-  // remove accidental /api prefix
   if (clean.startsWith("/api")) {
     clean = clean.replace(/^\/api/, "");
   }
 
-  // ensure leading slash
   if (!clean.startsWith("/")) {
     clean = `/${clean}`;
   }
@@ -57,9 +53,7 @@ export async function apiFetch(
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(token
-        ? { Authorization: `Bearer ${token}` }
-        : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
   });
@@ -73,10 +67,7 @@ export async function apiFetch(
   }
 
   if (!res.ok) {
-    console.error(
-      "❌ API ERROR:",
-      data || res.statusText
-    );
+    console.error("❌ API ERROR:", data || res.statusText);
 
     throw new Error(
       data?.error ||
@@ -107,6 +98,7 @@ export const adminAPI = {
   getStats: () =>
     apiFetch("/admin/stats"),
 
+  // ADMIN CHAT (existing)
   getChatMessages: () =>
     apiFetch("/admin/chat"),
 
@@ -141,35 +133,19 @@ export const packageAPI = {
     apiFetch("/packages"),
 
   track: (trackingNumber: string) =>
-    apiFetch(
-      `/packages/track/${trackingNumber}`
-    ),
+    apiFetch(`/packages/track/${trackingNumber}`),
 
-  // full package update
-  update: (
-    trackingNumber: string,
-    data: any
-  ) =>
-    apiFetch(
-      `/packages/${trackingNumber}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }
-    ),
+  update: (trackingNumber: string, data: any) =>
+    apiFetch(`/packages/${trackingNumber}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
 
-  // status update (edit modal)
-  updateStatus: (
-    trackingNumber: string,
-    data: any
-  ) =>
-    apiFetch(
-      `/packages/${trackingNumber}/status`,
-      {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }
-    ),
+  updateStatus: (trackingNumber: string, data: any) =>
+    apiFetch(`/packages/${trackingNumber}/status`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
 
   delete: (id: string | number) =>
     apiFetch(`/packages/${id}`, {
@@ -197,12 +173,26 @@ export const authAPI = {
   getUser: (id: string) =>
     apiFetch(`/users/${id}`),
 
-  updateUser: (
-    id: string,
-    data: any
-  ) =>
+  updateUser: (id: string, data: any) =>
     apiFetch(`/users/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+};
+
+// ============================================
+// ✅ CHAT API (FIX ADDED)
+// ============================================
+
+export const chatAPI = {
+  // customer sends message
+  sendMessage: (data: any) =>
+    apiFetch("/chat", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // customer/admin reads messages
+  getMessages: () =>
+    apiFetch("/chat"),
 };

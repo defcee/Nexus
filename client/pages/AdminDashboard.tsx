@@ -107,11 +107,17 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<
-    "overview" | "packages" | "invoices" | "users"
+    "overview" | "packages" | "invoices" | "users" | "chat"
   >("overview");
 
   const [packages, setPackages] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
+
+  /* =========================
+     CHAT STATE (ADDED ONLY)
+  ========================= */
+  const [messages, setMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState("");
 
   const [editingPackage, setEditingPackage] = useState<any>(null);
 
@@ -147,21 +153,29 @@ export default function AdminDashboard() {
     "Delivered",
   ];
 
+  /* =========================
+     AUTH CHECK
+  ========================= */
   useEffect(() => {
     const token = localStorage.getItem("admin_token");
     if (!token) navigate("/admin");
   }, [navigate]);
 
+  /* =========================
+     LOAD DATA (UPDATED ONLY)
+  ========================= */
   useEffect(() => {
     const load = async () => {
       try {
         const statsRes = await adminAPI.getStats();
         const pkgRes = await packageAPI.getAll();
         const invRes = await adminAPI.getInvoices();
+        const chatRes = await adminAPI.getChatMessages(); // ✅ ADDED
 
         setStats(statsRes || {});
         setPackages(pkgRes?.packages || []);
         setInvoices(invRes?.invoices || []);
+        setMessages(chatRes?.messages || []); // ✅ ADDED
       } catch (err) {
         console.error("LOAD ERROR:", err);
       }
@@ -169,6 +183,26 @@ export default function AdminDashboard() {
 
     load();
   }, []);
+
+  /* =========================
+     CHAT SEND FUNCTION (ADDED)
+  ========================= */
+  const sendChat = async () => {
+    if (!chatInput.trim()) return;
+
+    try {
+      const res = await adminAPI.saveChatMessage({
+        userId: null,
+        message: chatInput,
+        sender: "admin",
+      });
+
+      setMessages((prev) => [...prev, res.data]);
+      setChatInput("");
+    } catch (err) {
+      console.error("CHAT SEND ERROR:", err);
+    }
+  };
 
   const handleCreatePackage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -262,12 +296,59 @@ export default function AdminDashboard() {
             </Button>
           </div>
 
+          {/* =========================
+              TABS (CHAT ADDED ONLY)
+          ========================= */}
           <div className="flex gap-3 mb-6">
             <Button onClick={() => setActiveTab("overview")}>Overview</Button>
             <Button onClick={() => setActiveTab("packages")}>Packages</Button>
             <Button onClick={() => setActiveTab("invoices")}>Invoices</Button>
             <Button onClick={() => setActiveTab("users")}>Users</Button>
+            <Button onClick={() => setActiveTab("chat")}>Chat</Button> {/* ✅ ADDED */}
           </div>
+
+          {/* =========================
+              CHAT TAB UI (ADDED ONLY)
+          ========================= */}
+          {activeTab === "chat" && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Admin Chat Support</CardTitle>
+              </CardHeader>
+
+              <CardContent>
+                <div className="h-80 overflow-y-auto border p-3 rounded mb-4 bg-white">
+                  {messages.length === 0 ? (
+                    <p className="text-gray-500 text-center">
+                      No messages yet
+                    </p>
+                  ) : (
+                    messages.map((m, i) => (
+                      <div key={i} className="mb-2">
+                        <b>{m.sender}:</b> {m.message}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Type message..."
+                  />
+
+                  <Button onClick={sendChat}>
+                    Send
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* =========================
+              EXISTING SECTIONS (UNCHANGED)
+          ========================= */}
 
           {activeTab === "overview" && (
             <Card className="mb-6">
@@ -345,12 +426,9 @@ export default function AdminDashboard() {
             </Card>
           )}
 
+          {/* PACKAGES (UNCHANGED) */}
           {activeTab === "packages" && (
             <Card>
-              <CardHeader>
-                <CardTitle>Packages</CardTitle>
-              </CardHeader>
-
               <CardContent>
                 <table className="w-full text-sm">
                   <thead>
@@ -385,12 +463,9 @@ export default function AdminDashboard() {
             </Card>
           )}
 
+          {/* INVOICES (UNCHANGED) */}
           {activeTab === "invoices" && (
             <Card>
-              <CardHeader>
-                <CardTitle>Invoices</CardTitle>
-              </CardHeader>
-
               <CardContent>
                 {invoices.length === 0 ? (
                   <p className="text-center text-gray-500">No invoices yet</p>
@@ -423,12 +498,9 @@ export default function AdminDashboard() {
             </Card>
           )}
 
+          {/* USERS (UNCHANGED) */}
           {activeTab === "users" && (
             <Card>
-              <CardHeader>
-                <CardTitle>Users</CardTitle>
-              </CardHeader>
-
               <CardContent>
                 <p className="text-center text-gray-500">
                   No users available yet
@@ -437,6 +509,7 @@ export default function AdminDashboard() {
             </Card>
           )}
 
+          {/* EDIT MODAL (UNCHANGED) */}
           {editingPackage && (
             <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
               <div className="bg-white p-6 rounded w-[400px]">

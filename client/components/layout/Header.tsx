@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/LanguageContext";
 import LanguageSelector from "@/components/LanguageSelector";
 
@@ -20,6 +19,7 @@ const Header = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-primary/20 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container flex h-16 items-center justify-between">
+
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
           <img
@@ -33,7 +33,9 @@ const Header = () => {
           />
           <div className="hidden sm:block">
             <div className="text-lg font-bold text-primary">NEXUS</div>
-            <div className="text-xs text-secondary font-semibold">GLOBAL PARCEL</div>
+            <div className="text-xs text-secondary font-semibold">
+              GLOBAL PARCEL
+            </div>
           </div>
         </Link>
 
@@ -50,14 +52,9 @@ const Header = () => {
           ))}
         </nav>
 
-        {/* Admin Button and Language */}
+        {/* Language only (Admin removed) */}
         <div className="hidden md:flex items-center gap-6">
           <LanguageSelector />
-          <div className="flex items-center gap-2 border-l border-gray-300 pl-6">
-            <Link to="/admin">
-              <Button size="sm">Admin</Button>
-            </Link>
-          </div>
         </div>
 
         {/* Mobile Menu Button */}
@@ -73,6 +70,7 @@ const Header = () => {
       {isOpen && (
         <nav className="md:hidden border-t border-primary/20 bg-white">
           <div className="container py-4 space-y-3">
+
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -83,11 +81,11 @@ const Header = () => {
                 {link.label}
               </Link>
             ))}
-            <div className="pt-3 border-t border-primary/20 space-y-2">
-              <Link to="/admin" onClick={() => setIsOpen(false)}>
-                <Button className="w-full">Admin</Button>
-              </Link>
+
+            <div className="pt-3 border-t border-primary/20">
+              <LanguageSelector />
             </div>
+
           </div>
         </nav>
       )}

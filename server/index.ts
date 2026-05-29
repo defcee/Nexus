@@ -89,9 +89,7 @@ export function createServer() {
   // ==============================
   app.get("/api/db-test", async (_req, res) => {
     try {
-      const result = await pool.query(
-        "SELECT NOW() as now"
-      );
+      const result = await pool.query("SELECT NOW() as now");
 
       return res.json({
         success: true,
@@ -119,30 +117,12 @@ export function createServer() {
   // ==============================
   app.post("/api/packages", handleCreatePackage);
 
-  app.get(
-    "/api/packages/track/:trackingNumber",
-    handleTrackPackage
-  );
+  app.get("/api/packages/track/:trackingNumber", handleTrackPackage);
+  app.get("/api/packages", handleGetAllPackages);
 
-  app.get(
-    "/api/packages",
-    handleGetAllPackages
-  );
-
-  app.put(
-    "/api/packages/:trackingNumber/status",
-    handleUpdatePackageStatus
-  );
-
-  app.put(
-    "/api/packages/:id",
-    handleUpdatePackage
-  );
-
-  app.delete(
-    "/api/packages/:id",
-    handleDeletePackage
-  );
+  app.put("/api/packages/:trackingNumber/status", handleUpdatePackageStatus);
+  app.put("/api/packages/:id", handleUpdatePackage);
+  app.delete("/api/packages/:id", handleDeletePackage);
 
   // ==============================
   // ADMIN ROUTES
@@ -150,8 +130,14 @@ export function createServer() {
   app.post("/api/admin/login", handleAdminLogin);
   app.post("/api/admin/logout", handleAdminLogout);
   app.get("/api/admin/stats", handleGetAdminStats);
+
   app.get("/api/admin/chat", handleGetChatMessages);
   app.post("/api/admin/chat", handleSaveChatMessage);
+
+  // ✅ PUBLIC CHAT ROUTES (FIXED POSITION)
+  app.get("/api/chat", handleGetChatMessages);
+  app.post("/api/chat", handleSaveChatMessage);
+
   app.get("/api/admin/invoices", handleGetInvoices);
   app.post("/api/admin/invoices", handleCreateInvoice);
 
