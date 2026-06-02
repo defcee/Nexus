@@ -1,5 +1,28 @@
 import { RequestHandler } from "express";
 import { pool } from "../db";
+import { handleSendEmail } from "./email";
+
+async function sendPackageEmail(to: string, subject: string, message: string) {
+  const fakeReq = { body: { to, subject, message } } as any;
+  const fakeRes = {
+    status() {
+      return this;
+    },
+    json() {
+      return this;
+    },
+  } as any;
+  const fakeNext = () => {};
+
+  return handleSendEmail(fakeReq, fakeRes, fakeNext);
+}
+
+// =====================================================
+// TRACKING NUMBER GENERATOR
+// =====================================================
+function generateTrackingNumber() {
+  return `NEX${Date.now()}${Math.floor(Math.random() * 1000)}`;
+}
 
 // =====================================================
 // CREATE PACKAGE
@@ -8,61 +31,145 @@ export const handleCreatePackage: RequestHandler = async (req, res) => {
   try {
     const {
       sender_name,
+      sender_email,
       sender_address,
+
       receiver_name,
+      receiver_email,
       receiver_address,
       receiver_phone,
+
       package_type,
       weight,
       price,
-      eta, // ✅ MANUAL ETA ADDED
+      eta,
+      destination,
+      origin,
     } = req.body;
 
-    const trackingNumber =
-      "NEX" + Date.now() + Math.floor(Math.random() * 9999);
+    const cleanWeight = Number(weight) || 0;
+    const cleanPrice = Number(price) || 0;
 
+    // =========================
+    // 1. INSERT PACKAGE
+    // =========================
     const result = await pool.query(
       `
       INSERT INTO packages (
         tracking_number,
         sender_name,
+        sender_email,
         sender_address,
+
         receiver_name,
+        receiver_email,
         receiver_address,
         receiver_phone,
+
         package_type,
         weight,
         price,
+
         eta,
+        destination,
+        origin,
         status,
-        current_location,
-        created_at,
-        updated_at
+        current_location
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'Pending','Warehouse',NOW(),NOW())
+      VALUES (
+        $1,$2,$3,$4,
+        $5,$6,$7,$8,
+        $9,$10,$11,
+        $12,$13,$14,$15,$16
+      )
       RETURNING *
       `,
       [
-        trackingNumber,
+        generateTrackingNumber(),
         sender_name,
+        sender_email,
         sender_address,
+
         receiver_name,
+        receiver_email,
         receiver_address,
         receiver_phone,
+
         package_type,
-        weight,
-        price,
-        eta || null, // ✅ manual ETA support
+        cleanWeight,
+        cleanPrice,
+
+        eta || null,
+        destination || null,
+        origin || null,
+        "Pending",
+        "Warehouse",
       ]
     );
 
-    return res.status(201).json({
+    const newPackage = result.rows[0];
+
+    // =========================
+    // 2. CREATE INVOICE
+    // =========================
+    await pool.query(
+      `
+      INSERT INTO invoices (
+        tracking_number,
+        total_amount,
+        sender_name,
+        receiver_name,
+        sender_address,
+        receiver_address
+      )
+      VALUES ($1,$2,$3,$4,$5,$6)
+      `,
+      [
+        newPackage.tracking_number,
+        cleanPrice,
+        sender_name,
+        receiver_name,
+        sender_address,
+        receiver_address,
+      ]
+    );
+
+    // =========================
+    // 3. SEND EMAIL (SAFE)
+    // =========================
+    if (receiver_email && receiver_email.includes("@")) {
+      try {
+        await sendPackageEmail(
+          receiver_email,
+          "📦 Your Package Has Been Created",
+          `
+Hello ${receiver_name},
+
+Your package has been successfully created.
+
+Tracking Number: ${newPackage.tracking_number}
+Status: Pending
+ETA: ${eta || "Not set"}
+
+You can track your package anytime using your tracking number.
+
+Thank you.
+          `
+        );
+      } catch (emailErr) {
+        console.error("EMAIL FAILED:", emailErr);
+      }
+    }
+
+    return res.json({
       success: true,
-      package: result.rows[0],
+      package: newPackage,
     });
   } catch (error) {
     console.error("CREATE PACKAGE ERROR:", error);
-    return res.status(500).json({ error: "Failed to create package" });
+    return res.status(500).json({
+      error: "Failed to create package",
+    });
   }
 };
 
@@ -80,7 +187,10 @@ export const handleGetAllPackages: RequestHandler = async (_req, res) => {
       packages: result.rows,
     });
   } catch (error) {
-    return res.status(500).json({ error: "Failed to fetch packages" });
+    console.error("GET PACKAGES ERROR:", error);
+    return res.status(500).json({
+      error: "Failed to fetch packages",
+    });
   }
 };
 
@@ -100,13 +210,18 @@ export const handleTrackPackage: RequestHandler = async (req, res) => {
       [trackingNumber]
     );
 
-    if (!result.rows[0]) {
-      return res.status(404).json({ error: "Package not found" });
+    if (!result.rows.length) {
+      return res.status(404).json({
+        error: "Package not found",
+      });
     }
 
     return res.json(result.rows[0]);
   } catch (error) {
-    return res.status(500).json({ error: "Tracking failed" });
+    console.error("TRACK ERROR:", error);
+    return res.status(500).json({
+      error: "Tracking failed",
+    });
   }
 };
 
@@ -135,7 +250,10 @@ export const handleUpdatePackageStatus: RequestHandler = async (req, res) => {
       package: result.rows[0],
     });
   } catch (error) {
-    return res.status(500).json({ error: "Update failed" });
+    console.error("STATUS UPDATE ERROR:", error);
+    return res.status(500).json({
+      error: "Update failed",
+    });
   }
 };
 
@@ -156,7 +274,10 @@ export const handleDeletePackage: RequestHandler = async (req, res) => {
 
     return res.json({ success: true });
   } catch (error) {
-    return res.status(500).json({ error: "Delete failed" });
+    console.error("DELETE ERROR:", error);
+    return res.status(500).json({
+      error: "Delete failed",
+    });
   }
 };
 
@@ -204,6 +325,9 @@ export const handleUpdatePackage: RequestHandler = async (req, res) => {
       package: result.rows[0],
     });
   } catch (error) {
-    return res.status(500).json({ error: "Update failed" });
+    console.error("UPDATE ERROR:", error);
+    return res.status(500).json({
+      error: "Update failed",
+    });
   }
 };
