@@ -2,21 +2,6 @@ import { RequestHandler } from "express";
 import { pool } from "../db";
 import { handleSendEmail } from "./email";
 
-async function sendPackageEmail(to: string, subject: string, message: string) {
-  const fakeReq = { body: { to, subject, message } } as any;
-  const fakeRes = {
-    status() {
-      return this;
-    },
-    json() {
-      return this;
-    },
-  } as any;
-  const fakeNext = () => {};
-
-  return handleSendEmail(fakeReq, fakeRes, fakeNext);
-}
-
 // =====================================================
 // TRACKING NUMBER GENERATOR
 // =====================================================
@@ -110,36 +95,45 @@ export const handleCreatePackage: RequestHandler = async (req, res) => {
     const newPackage = result.rows[0];
 
     // =========================
-    // 2. CREATE INVOICE
+    // 2. CREATE INVOICE (FIXED CRASH)
     // =========================
-    await pool.query(
-      `
-      INSERT INTO invoices (
-        tracking_number,
-        total_amount,
-        sender_name,
-        receiver_name,
-        sender_address,
-        receiver_address
-      )
-      VALUES ($1,$2,$3,$4,$5,$6)
-      `,
-      [
-        newPackage.tracking_number,
-        cleanPrice,
-        sender_name,
-        receiver_name,
-        sender_address,
-        receiver_address,
-      ]
-    );
+    try {
+      const invoiceNumber = `INV-${Date.now()}`;
+
+      await pool.query(
+        `
+        INSERT INTO invoices (
+          invoice_number,
+          tracking_number,
+          total_amount,
+          sender_name,
+          receiver_name,
+          sender_address,
+          receiver_address
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7)
+        `,
+        [
+          invoiceNumber,
+          newPackage.tracking_number,
+          cleanPrice,
+          sender_name,
+          receiver_name,
+          sender_address,
+          receiver_address,
+        ]
+      );
+    } catch (invoiceErr) {
+      // 🔥 IMPORTANT: do NOT break package creation if invoice fails
+      console.error("INVOICE ERROR (NON-FATAL):", invoiceErr);
+    }
 
     // =========================
     // 3. SEND EMAIL (SAFE)
     // =========================
     if (receiver_email && receiver_email.includes("@")) {
       try {
-        await sendPackageEmail(
+        await (handleSendEmail as unknown as (to: string, subject: string, html: string) => Promise<void>)(
           receiver_email,
           "📦 Your Package Has Been Created",
           `
@@ -282,7 +276,7 @@ export const handleDeletePackage: RequestHandler = async (req, res) => {
 };
 
 // =====================================================
-// UPDATE PACKAGE (FULL EDIT)
+// UPDATE PACKAGE
 // =====================================================
 export const handleUpdatePackage: RequestHandler = async (req, res) => {
   try {
