@@ -285,6 +285,283 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           )}
+{/* PACKAGES */}
+{activeTab === "packages" && (
+  <Card>
+    <CardHeader>
+      <CardTitle>Created Packages</CardTitle>
+    </CardHeader>
+
+    <CardContent>
+      {packages.length === 0 ? (
+        <p className="text-center text-gray-500">
+          No packages found
+        </p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-3">Tracking</th>
+              <th className="text-left py-3">Sender</th>
+              <th className="text-left py-3">Receiver</th>
+              <th className="text-left py-3">Status</th>
+              <th className="text-left py-3">ETA</th>
+              <th className="text-left py-3">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {packages.map((p) => (
+              <tr key={p.id} className="border-b">
+                <td>{p.tracking_number}</td>
+                <td>{p.sender_name}</td>
+                <td>{p.receiver_name}</td>
+                <td>{p.status}</td>
+                <td>{p.eta || "Not set"}</td>
+
+                <td className="flex gap-2 py-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditingPackage(p);
+
+                      setEditForm({
+                        status: p.status || "",
+                        location: p.current_location || "",
+                        eta: p.eta || "",
+                      });
+                    }}
+                  >
+                    <Edit2 size={16} />
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={async () => {
+                      await packageAPI.delete(p.id);
+
+                      setPackages((prev) =>
+                        prev.filter((x) => x.id !== p.id)
+                      );
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </CardContent>
+  </Card>
+)}
+
+{/* INVOICES */}
+{activeTab === "invoices" && (
+  <Card>
+    <CardHeader>
+      <CardTitle>Invoices</CardTitle>
+    </CardHeader>
+
+    <CardContent>
+      {invoices.length === 0 ? (
+        <p className="text-center text-gray-500">
+          No invoices yet
+        </p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b">
+              <th>Invoice No.</th>
+              <th>Tracking</th>
+              <th>Receiver</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {invoices.map((inv) => (
+              <tr key={inv.id} className="border-b">
+                <td>{inv.invoice_number}</td>
+                <td>{inv.tracking_number}</td>
+                <td>{inv.receiver_name}</td>
+                <td>${inv.total_amount}</td>
+                <td>{inv.status || "Pending"}</td>
+
+                <td>
+                  <Button
+                    size="sm"
+                    onClick={() => downloadInvoice(inv)}
+                  >
+                    View
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </CardContent>
+  </Card>
+)}
+
+{/* USERS */}
+{activeTab === "users" && (
+  <Card>
+    <CardContent className="py-10">
+      <p className="text-center text-gray-500">
+        No users available yet
+      </p>
+    </CardContent>
+  </Card>
+)}
+
+{/* CHAT */}
+{activeTab === "chat" && (
+  <Card>
+    <CardHeader>
+      <CardTitle>Admin Chat Support</CardTitle>
+    </CardHeader>
+
+    <CardContent>
+      <div className="h-80 overflow-y-auto border rounded p-4 mb-4">
+        {messages.length === 0 ? (
+          <p className="text-center text-gray-500">
+            No messages
+          </p>
+        ) : (
+          messages.map((m, i) => (
+            <div key={i} className="mb-2">
+              <b>{m.sender}</b>: {m.message}
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <Input
+          value={chatInput}
+          onChange={(e) =>
+            setChatInput(e.target.value)
+          }
+          placeholder="Type message..."
+        />
+
+        <Button
+          onClick={async () => {
+            if (!chatInput.trim()) return;
+
+            const res =
+              await adminAPI.saveChatMessage({
+                userId: null,
+                message: chatInput,
+                sender: "admin",
+              });
+
+            setMessages((prev) => [
+              ...prev,
+              res.data,
+            ]);
+
+            setChatInput("");
+          }}
+        >
+          Send
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+)}
+
+{/* EDIT PACKAGE */}
+{editingPackage && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg p-6 w-[400px]">
+      <h2 className="text-lg font-bold mb-4">
+        Update Package
+      </h2>
+
+      <Input
+        placeholder="Status"
+        className="mb-3"
+        value={editForm.status}
+        onChange={(e) =>
+          setEditForm({
+            ...editForm,
+            status: e.target.value,
+          })
+        }
+      />
+
+      <Input
+        placeholder="Current Location"
+        className="mb-3"
+        value={editForm.location}
+        onChange={(e) =>
+          setEditForm({
+            ...editForm,
+            location: e.target.value,
+          })
+        }
+      />
+
+      <Input
+        placeholder="ETA"
+        className="mb-4"
+        value={editForm.eta}
+        onChange={(e) =>
+          setEditForm({
+            ...editForm,
+            eta: e.target.value,
+          })
+        }
+      />
+
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() =>
+            setEditingPackage(null)
+          }
+        >
+          Cancel
+        </Button>
+
+        <Button
+          onClick={async () => {
+            const res =
+              await packageAPI.update(
+                editingPackage.id,
+                {
+                  status: editForm.status,
+                  current_location:
+                    editForm.location,
+                  eta: editForm.eta,
+                }
+              );
+
+            setPackages((prev) =>
+              prev.map((p) =>
+                p.id === editingPackage.id
+                  ? res.package
+                  : p
+              )
+            );
+
+            setEditingPackage(null);
+          }}
+        >
+          Save
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
+
 
         </div>
       </section>
