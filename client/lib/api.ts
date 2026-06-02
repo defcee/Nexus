@@ -1,5 +1,3 @@
-//import { use } from "react";
-
 // ============================================
 // NEXUS API CONFIG (PRODUCTION SAFE)
 // ============================================
@@ -98,7 +96,6 @@ export const adminAPI = {
   getStats: () =>
     apiFetch("/admin/stats"),
 
-  // ADMIN CHAT (existing)
   getChatMessages: () =>
     apiFetch("/admin/chat"),
 
@@ -113,6 +110,19 @@ export const adminAPI = {
 
   createInvoice: (data: any) =>
     apiFetch("/admin/invoices", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // ============================================
+  // ✅ EMAIL FIX (ADDED)
+  // ============================================
+  sendEmail: (data: {
+    to: string | string[];
+    subject: string;
+    message: string;
+  }) =>
+    apiFetch("/email/send", {
       method: "POST",
       body: JSON.stringify(data),
     }),
@@ -181,18 +191,16 @@ export const authAPI = {
 };
 
 // ============================================
-// ✅ CHAT API (FIX ADDED)
+// CHAT API
 // ============================================
 
 export const chatAPI = {
-  // customer sends message
   sendMessage: (data: any) =>
     apiFetch("/chat", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  // customer/admin reads messages
   getMessages: () =>
     apiFetch("/chat"),
 };

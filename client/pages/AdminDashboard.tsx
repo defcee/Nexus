@@ -1,5 +1,3 @@
-console.log("🔥 NEW ADMIN DASHBOARD LOADED");
-
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,17 +16,6 @@ import { adminAPI, packageAPI } from "@/lib/api";
 
 const logoUrl = "/assets/logo.png";
 
-/* =========================
-   INVOICE DOWNLOAD
-========================= */
-const downloadInvoice = (invoice: any) => {
-  const win = window.open("", "_blank");
-  if (!win) return;
-
-  win.document.write(`...`); // unchanged (trimmed for clarity)
-  win.document.close();
-};
-
 export default function AdminDashboard() {
   const navigate = useNavigate();
 
@@ -44,81 +31,27 @@ export default function AdminDashboard() {
 
   const [editingPackage, setEditingPackage] = useState<any>(null);
 
-  const [stats, setStats] = useState({
-    totalShipments: 0,
-    deliveredShipments: 0,
-    pendingShipments: 0,
-    totalUsers: 0,
-    revenueToday: 0,
-  });
-
   const [formData, setFormData] = useState({
     sender_name: "",
     sender_address: "",
     receiver_name: "",
     receiver_address: "",
     receiver_phone: "",
+    receiver_email: "", // ✅ ADDED EMAIL FIELD
     package_type: "",
     weight: "",
     price: "",
-    recipient_email: "", // ✅ ADDED
+    eta: "", // ✅ MANUAL ETA FIELD
   });
-
-  const [editForm, setEditForm] = useState({
-    status: "",
-    location: "",
-  });
-
-  const allowedStatuses = [
-    "Pending",
-    "On Transit",
-    "On Hold",
-    "Arrived",
-    "Delivered",
-  ];
 
   useEffect(() => {
     const token = localStorage.getItem("admin_token");
     if (!token) navigate("/admin");
   }, [navigate]);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const statsRes = await adminAPI.getStats();
-        const pkgRes = await packageAPI.getAll();
-        const invRes = await adminAPI.getInvoices();
-        const chatRes = await adminAPI.getChatMessages();
-
-        setStats(statsRes || {});
-        setPackages(pkgRes?.packages || []);
-        setInvoices(invRes?.invoices || []);
-        setMessages(chatRes?.messages || []);
-      } catch (err) {
-        console.error("LOAD ERROR:", err);
-      }
-    };
-
-    load();
-  }, []);
-
-  const sendChat = async () => {
-    if (!chatInput.trim()) return;
-
-    try {
-      const res = await adminAPI.saveChatMessage({
-        userId: null,
-        message: chatInput,
-        sender: "admin",
-      });
-
-      setMessages((prev) => [...prev, res.data]);
-      setChatInput("");
-    } catch (err) {
-      console.error("CHAT SEND ERROR:", err);
-    }
-  };
-
+  /* =========================
+     CREATE PACKAGE (FIXED)
+  ========================= */
   const handleCreatePackage = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -130,10 +63,14 @@ export default function AdminDashboard() {
 
       setPackages((prev) => [newPkg, ...prev]);
 
+      // ================================
+      // CREATE INVOICE
+      // ================================
       const invoiceRes = await adminAPI.createInvoice({
         trackingNumber: newPkg.tracking_number,
         userId: null,
         totalAmount: Number(newPkg.price),
+
         sender_name: formData.sender_name,
         sender_address: formData.sender_address,
         receiver_name: formData.receiver_name,
@@ -142,50 +79,44 @@ export default function AdminDashboard() {
 
       if (invoiceRes?.invoice) {
         setInvoices((prev) => [invoiceRes.invoice, ...prev]);
-        downloadInvoice(invoiceRes.invoice);
       }
 
+      // ================================
+      // 🔥 SEND EMAIL (IMPORTANT FIX)
+      // ================================
+     await adminAPI.sendEmail({
+  to: formData.receiver_email, // MUST EXIST
+  subject: `Package Created - ${newPkg.tracking_number}`,
+  message: `
+    Hello ${formData.receiver_name},
+
+    Your package has been created successfully.
+
+    Tracking Number: ${newPkg.tracking_number}
+    Status: Pending
+    ETA: ${formData.eta || newPkg.eta}
+
+    Nexus Logistics
+  `,
+});
+
+      // RESET FORM
       setFormData({
         sender_name: "",
         sender_address: "",
         receiver_name: "",
         receiver_address: "",
         receiver_phone: "",
+        receiver_email: "",
         package_type: "",
         weight: "",
         price: "",
-        recipient_email: "", // reset
+        eta: "",
       });
+
     } catch (err) {
       console.error("CREATE ERROR:", err);
     }
-  };
-
-  const handleDelete = async (id: number) => {
-    await packageAPI.delete(id);
-    setPackages((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const submitEdit = async () => {
-    if (!editingPackage) return;
-
-    const trackingNumber =
-      editingPackage.tracking_number || editingPackage.trackingNumber;
-
-    const res = await packageAPI.updateStatus(trackingNumber, {
-      status: editForm.status,
-      location: editForm.location,
-    });
-
-    setPackages((prev) =>
-      prev.map((p) =>
-        (p.tracking_number || p.trackingNumber) === trackingNumber
-          ? res.package
-          : p
-      )
-    );
-
-    setEditingPackage(null);
   };
 
   return (
@@ -193,8 +124,9 @@ export default function AdminDashboard() {
       <section className="py-8">
         <div className="container">
 
-          {/* ===== UI unchanged ===== */}
-
+          {/* =========================
+              CREATE PACKAGE FORM
+          ========================= */}
           {activeTab === "overview" && (
             <Card className="mb-6">
               <CardHeader>
@@ -206,16 +138,85 @@ export default function AdminDashboard() {
                   onSubmit={handleCreatePackage}
                   className="grid md:grid-cols-2 gap-4"
                 >
-                  {/* existing inputs unchanged */}
+                  <Input
+                    placeholder="Sender Name"
+                    value={formData.sender_name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sender_name: e.target.value })
+                    }
+                  />
 
                   <Input
-                    placeholder="Recipient Email"
-                    value={formData.recipient_email}
+                    placeholder="Sender Address"
+                    value={formData.sender_address}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        recipient_email: e.target.value,
-                      })
+                      setFormData({ ...formData, sender_address: e.target.value })
+                    }
+                  />
+
+                  <Input
+                    placeholder="Receiver Name"
+                    value={formData.receiver_name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, receiver_name: e.target.value })
+                    }
+                  />
+
+                  <Input
+                    placeholder="Receiver Address"
+                    value={formData.receiver_address}
+                    onChange={(e) =>
+                      setFormData({ ...formData, receiver_address: e.target.value })
+                    }
+                  />
+
+                  {/* ✅ EMAIL FIELD ADDED */}
+                  <Input
+                    placeholder="Receiver Email"
+                    value={formData.receiver_email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, receiver_email: e.target.value })
+                    }
+                  />
+
+                  <Input
+                    placeholder="Receiver Phone"
+                    value={formData.receiver_phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, receiver_phone: e.target.value })
+                    }
+                  />
+
+                  <Input
+                    placeholder="Package Type"
+                    value={formData.package_type}
+                    onChange={(e) =>
+                      setFormData({ ...formData, package_type: e.target.value })
+                    }
+                  />
+
+                  <Input
+                    placeholder="Weight"
+                    value={formData.weight}
+                    onChange={(e) =>
+                      setFormData({ ...formData, weight: e.target.value })
+                    }
+                  />
+
+                  <Input
+                    placeholder="Price"
+                    value={formData.price}
+                    onChange={(e) =>
+                      setFormData({ ...formData, price: e.target.value })
+                    }
+                  />
+
+                  {/* ✅ ETA FIELD ADDED */}
+                  <Input
+                    placeholder="ETA (e.g. 2026-06-10 or 5 Days)"
+                    value={formData.eta}
+                    onChange={(e) =>
+                      setFormData({ ...formData, eta: e.target.value })
                     }
                   />
 
@@ -228,7 +229,6 @@ export default function AdminDashboard() {
             </Card>
           )}
 
-          {/* rest UI unchanged */}
         </div>
       </section>
     </Layout>

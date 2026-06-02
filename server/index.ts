@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { handleSendEmail } from "./routes/email";
 
 import { pool } from "./db";
 
@@ -141,6 +142,7 @@ export function createServer() {
 
   app.get("/api/admin/invoices", handleGetInvoices);
   app.post("/api/admin/invoices", handleCreateInvoice);
+  app.post("/api/email/send", handleSendEmail);
 
   return app;
 }
