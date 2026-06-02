@@ -272,7 +272,10 @@ export const handleCreateInvoice: RequestHandler = async (req, res) => {
     }
 
     const invoiceNumber =
-      "INV-" + Date.now() + "-" + Math.floor(Math.random() * 9999);
+      "INV-" +
+      Date.now() +
+      "-" +
+      Math.floor(Math.random() * 9999);
 
     const insertResult = await pool.query(
       `
@@ -282,23 +285,15 @@ export const handleCreateInvoice: RequestHandler = async (req, res) => {
         tracking_number,
         user_id,
         total_amount,
-
         sender_name,
-        sender_address,
         receiver_name,
+        sender_address,
         receiver_address,
-
-        status,
-        invoice_file_url,
-        created_at,
-        updated_at
+        status
       )
       VALUES
       (
-        $1,$2,$3,$4,
-        $5,$6,$7,$8,
-        $9,$10,
-        NOW(),NOW()
+        $1,$2,$3,$4,$5,$6,$7,$8,$9
       )
       RETURNING *
       `,
@@ -306,15 +301,14 @@ export const handleCreateInvoice: RequestHandler = async (req, res) => {
         invoiceNumber,
         trackingNumber,
         userId || null,
-        parseFloat(totalAmount),
+        Number(totalAmount),
 
         sender_name || null,
-        sender_address || null,
         receiver_name || null,
+        sender_address || null,
         receiver_address || null,
 
         "Pending",
-        `invoice-${trackingNumber}.html`,
       ]
     );
 
@@ -323,7 +317,10 @@ export const handleCreateInvoice: RequestHandler = async (req, res) => {
       invoice: insertResult.rows[0],
     });
   } catch (error) {
-    console.error("CREATE INVOICE ERROR:", error);
+    console.error(
+      "CREATE INVOICE ERROR:",
+      error
+    );
 
     return res.status(500).json({
       error: "Failed to create invoice",
