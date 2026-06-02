@@ -1,63 +1,27 @@
-import { RequestHandler } from "express";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export const handleContact: RequestHandler = async (
-  req,
-  res
-) => {
-  const {
-    name,
-    email,
-    subject,
-    message,
-  } = req.body;
-
-  if (!name || !email || !message) {
-    return res.status(400).json({
-      error:
-        "Name, email and message are required",
-    });
-  }
-
+export const handleContact = async (req, res) => {
   try {
-    await resend.emails.send({
-      from:
-        "Nexus Support <support@nexusglog.com>",
-      to:
-        process.env.CONTACT_EMAIL ||
-        "support@nexusglog.com",
+    const { name, email, subject, message } = req.body;
 
+    const data = await resend.emails.send({
+      from: "Nexus Support <support@app.nexusglog.com>",
+      to: ["support@nexusglog.com"],
+      subject: subject || "New Contact Message",
       replyTo: email,
-
-      subject:
-        subject ||
-        `New Contact Message from ${name}`,
-
       text: `
 Name: ${name}
 Email: ${email}
-Subject: ${subject || "No subject"}
-
-Message:
-${message}
+Subject: ${subject}
+Message: ${message}
       `,
     });
 
-    return res.json({
-      success: true,
-      message:
-        "Message sent successfully",
-    });
-  } catch (err) {
-    console.error(
-      "CONTACT EMAIL ERROR:",
-      err
-    );
-
-    return res.status(500).json({
-      error: "Failed to send email",
-    });
+    return res.json({ success: true, data });
+  } catch (error: any) {
+    console.error("RESEND ERROR:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
