@@ -1,6 +1,7 @@
 import { RequestHandler } from "express";
 import { pool } from "../db";
 import { handleSendEmail } from "./email";
+import { sendEmail } from "../email.service";
 
 // =====================================================
 // TRACKING NUMBER GENERATOR
@@ -131,12 +132,12 @@ export const handleCreatePackage: RequestHandler = async (req, res) => {
     // =========================
     // 3. SEND EMAIL (SAFE)
     // =========================
-    if (receiver_email && receiver_email.includes("@")) {
-      try {
-        await (handleSendEmail as unknown as (to: string, subject: string, html: string) => Promise<void>)(
-          receiver_email,
-          "📦 Your Package Has Been Created",
-          `
+   if (receiver_email && receiver_email.includes("@")) {
+  try {
+    await sendEmail(
+      receiver_email,
+      "📦 Your Package Has Been Created",
+      `
 Hello ${receiver_name},
 
 Your package has been successfully created.
@@ -148,12 +149,12 @@ ETA: ${eta || "Not set"}
 You can track your package anytime using your tracking number.
 
 Thank you.
-          `
-        );
-      } catch (emailErr) {
-        console.error("EMAIL FAILED:", emailErr);
-      }
-    }
+      `
+    );
+  } catch (emailErr) {
+    console.error("EMAIL FAILED:", emailErr);
+  }
+}
 
     return res.json({
       success: true,
@@ -162,7 +163,7 @@ Thank you.
   } catch (error) {
     console.error("CREATE PACKAGE ERROR:", error);
     return res.status(500).json({
-      error: "Failed to create package",
+      error: "Package creation failed",
     });
   }
 };

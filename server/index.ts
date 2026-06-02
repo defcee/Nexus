@@ -14,14 +14,7 @@ import {
   handleUpdateProfile,
 } from "./routes/auth";
 
-import {
-  handleCreatePackage,
-  handleGetAllPackages,
-  handleTrackPackage,
-  handleUpdatePackageStatus,
-  handleDeletePackage,
-  handleUpdatePackage,
-} from "./routes/packages";
+import * as packages from "./routes/packages";
 
 import {
   handleAdminLogin,
@@ -117,14 +110,20 @@ export function createServer() {
   // ==============================
   // PACKAGE ROUTES
   // ==============================
-  app.post("/api/packages", handleCreatePackage);
-  app.get("/api/packages", handleGetAllPackages);
+  app.post("/api/packages", packages.handleCreatePackage);
+  app.get("/api/packages", (packages as any).handleGetAllPackages);
 
-  app.get("/api/packages/track/:trackingNumber", handleTrackPackage);
-  app.put("/api/packages/:trackingNumber/status", handleUpdatePackageStatus);
+  app.get(
+    "/api/packages/track/:trackingNumber",
+    (packages as any).handleTrackPackage
+  );
+  app.put(
+    "/api/packages/:trackingNumber/status",
+    (packages as any).handleUpdatePackageStatus
+  );
 
-  app.put("/api/packages/:id", handleUpdatePackage);
-  app.delete("/api/packages/:id", handleDeletePackage);
+  app.put("/api/packages/:id", (packages as any).handleUpdatePackage);
+  app.delete("/api/packages/:id", (packages as any).handleDeletePackage);
 
   // ==============================
   // ADMIN ROUTES

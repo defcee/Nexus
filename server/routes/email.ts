@@ -4,21 +4,26 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // =====================================================
-// SEND EMAIL
+// SEND EMAIL (CLEAN VERSION)
 // =====================================================
 export const handleSendEmail: RequestHandler = async (req, res) => {
   try {
     const { to, subject, message } = req.body;
 
+    // ✅ VALIDATION
     if (!to || !subject || !message) {
       return res.status(400).json({
-        error: "Missing email fields",
+        error: "Missing email fields (to, subject, message)",
       });
     }
 
+    // Normalize recipients
+    const recipients = Array.isArray(to) ? to : [to];
+
+    // Send email via Resend
     const result = await resend.emails.send({
-      from: "Nexus Support <support@nexusglog.com>", // ✅ FIXED DOMAIN
-      to: Array.isArray(to) ? to : [to],
+      from: "Nexus Support <support@nexusglog.com>",
+      to: recipients,
       subject,
       text: message,
     });
