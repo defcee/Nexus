@@ -1,181 +1,282 @@
-import { useState, useEffect } from "react";
-import { MessageCircle, X, Send } from "lucide-react";
+import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { chatAPI } from "@/lib/api";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CheckCircle, MapPin, Zap, Shield, Clock, Truck } from "lucide-react";
+import { Link } from "react-router-dom";
 
-interface Message {
-  id: number;
-  text: string;
-  sender: "user" | "bot" | "agent";
-  timestamp: Date;
-}
-
-export default function ChatWidget() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
+export default function Services() {
+  const services = [
     {
-      id: 1,
-      text: "Hello! How can we help you today?",
-      sender: "bot",
-      timestamp: new Date(),
+      icon: Truck,
+      title: "Local Delivery",
+      description: "Same-day and next-day delivery within city limits",
+      details: [
+        "Real-time tracking",
+        "Flexible delivery windows",
+        "SMS & email notifications",
+        "Signature confirmation"
+      ],
+      image: "/assets/local-delivery.jpg",
+      price: "From $500"
     },
-  ]);
-  const [inputValue, setInputValue] = useState("");
-  const [hasNewMessage, setHasNewMessage] = useState(true);
+    {
+      icon: MapPin,
+      title: "International Shipping",
+      description: "Fast and reliable worldwide parcel delivery",
+      details: [
+        "50+ countries covered",
+        "Customs documentation handled",
+        "Insurance available",
+        "Express & Standard options"
+      ],
+      image: "/assets/international-shipping.jpg",
+      
+    },
+    {
+      icon: Zap,
+      title: "Same-Day Express",
+      description: "Ultra-fast delivery for urgent shipments",
+      details: [
+        "2-hour delivery window",
+        "Priority handling",
+        "Real-time updates",
+        "Guaranteed on-time delivery"
+      ],
+      image: "/assets/same-day-express.jpg",
+      
+    },
+    {
+      icon: Shield,
+      title: "Diplomatic Delivery",
+      description: "Specialized handling for diplomatic shipments and official documents",
+      details: [
+        "Official document handling",
+        "Restricted item compliance",
+        "Priority processing",
+        "Secure custody"
+      ],
+      image: "/assets/diplomatic-delivery.jpg",
+      
+    },
+    {
+      icon: Shield,
+      title: "Fragile Item Handling",
+      description: "Specialized care for delicate and valuable items",
+      details: [
+        "Custom packaging",
+        "Shock-absorption padding",
+        "Insurance included",
+        "Gentle handling guarantee"
+      ],
+      image: "/assets/fragile-handling.jpg",
+      
+    },
+    {
+      icon: Clock,
+      title: "Refrigerated Shipping",
+      description: "Temperature-controlled delivery for perishables",
+      details: [
+        "2-8°C temperature control",
+        "Real-time temp monitoring",
+        "Fresh product guarantee",
+        "Specialized handling"
+      ],
+      image: "/assets/refrigerated-shipping.jpg",
+      
+    },
+    {
+      icon: CheckCircle,
+      title: "Document Delivery",
+      description: "Secure and confidential document shipping",
+      details: [
+        "Secure sealed envelopes",
+        "Signature required",
+        "Chain of custody tracking",
+        "Legal document certified"
+      ],
+      image: "/assets/document-delivery.jpg",
+     
+    },
+  ];
 
-  useEffect(() => {
-    if (isOpen) {
-      setHasNewMessage(false);
-    }
-  }, [isOpen]);
-
-  // =========================================
-  // SEND MESSAGE (FIXED → NOW SAVES TO DB)
-  // =========================================
-  const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
-
-    const newMessage: Message = {
-      id: Date.now(),
-      text: inputValue,
-      sender: "user",
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-
-    const messageToSend = inputValue;
-    setInputValue("");
-
-    try {
-      await chatAPI.sendMessage({
-        message: messageToSend,
-        sender: "user",
-        userId: null,
-      });
-    } catch (err) {
-      console.error("CHAT SEND ERROR:", err);
-    }
-
-    // Simulated bot reply (you can later replace with real agent system)
-    setTimeout(() => {
-      const botResponses = [
-        "Thanks for reaching out! How can I assist you?",
-        "I'm here to help with tracking, shipping, and support questions.",
-        "You can also connect with a live agent if you need further assistance.",
-      ];
-
-      const randomResponse =
-        botResponses[Math.floor(Math.random() * botResponses.length)];
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          text: randomResponse,
-          sender: "bot",
-          timestamp: new Date(),
-        },
-      ]);
-
-      // optional: also store bot reply
-      chatAPI.sendMessage({
-        message: randomResponse,
-        sender: "bot",
-        userId: null,
-      });
-    }, 500);
-  };
-
-  const handleConnectAgent = () => {
-    const agentMessage: Message = {
-      id: Date.now(),
-      text: "An agent will be with you shortly. Please wait...",
-      sender: "agent",
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, agentMessage]);
-
-    chatAPI.sendMessage({
-      message: agentMessage.text,
-      sender: "agent",
-      userId: null,
-    });
-  };
+  const features = [
+    {
+      icon: MapPin,
+      title: "Real-Time GPS Tracking",
+      description: "Track your package live with GPS coordinates updated every minute",
+      image: "/assets/gps-tracking.jpg"
+    },
+    {
+      icon: Clock,
+      title: "Estimated Delivery Time",
+      description: "Know exactly when your package will arrive with precise time windows",
+      image: "/assets/estimated-delivery.jpg"
+    },
+    {
+      icon: Shield,
+      title: "24/7 Live Chat Support",
+      description: "Round-the-clock customer support ready to help with any questions",
+      image: "/assets/live-chat-support.jpg"
+    },
+  ];
 
   return (
-    <>
-      {/* Chat Widget Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-secondary hover:bg-secondary/90 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 transform hover:scale-110"
-      >
-        {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
-        {hasNewMessage && !isOpen && (
-          <div className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full animate-pulse" />
-        )}
-      </button>
+    <Layout>
+      {/* Hero Section */}
+      <section className="bg-gradient-to-r from-primary to-secondary text-white py-16 md:py-24">
+        <div className="container">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Our Services</h1>
+          <p className="text-xl text-blue-100">Comprehensive parcel delivery solutions for every need</p>
+        </div>
+      </section>
 
-      {/* Chat Window */}
-      {isOpen && (
-        <div className="fixed bottom-24 right-6 w-96 max-w-[calc(100vw-1.5rem)] h-[500px] bg-white rounded-2xl shadow-2xl z-40 flex flex-col overflow-hidden animate-slide-up">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-primary to-secondary text-white p-4">
-            <h3 className="font-semibold text-lg">Nexus Support</h3>
-            <p className="text-sm text-blue-100">Usually responds in minutes</p>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${
-                  msg.sender === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-xs px-4 py-2 rounded-lg ${
-                    msg.sender === "user"
-                      ? "bg-secondary text-white"
-                      : msg.sender === "agent"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-white text-gray-800 border"
-                  }`}
-                >
-                  <p className="text-sm">{msg.text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="px-4 py-2 bg-white border-t">
-            <Button
-              onClick={handleConnectAgent}
-              variant="outline"
-              className="w-full text-xs mb-3"
-            >
-              Connect to Agent
-            </Button>
-          </div>
-
-          {/* Input */}
-          <div className="p-4 border-t bg-white flex gap-2">
-            <Input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-              placeholder="Type your message..."
-            />
-            <Button onClick={handleSendMessage}>
-              <Send size={18} />
-            </Button>
+      {/* Services Grid */}
+      <section className="py-16 md:py-24">
+        <div className="container">
+          <h2 className="text-3xl font-bold text-primary text-center mb-12">Shipping Solutions</h2>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            {services.map((service, idx) => {
+              const Icon = service.icon;
+              return (
+                <Card key={idx} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <div className="h-48 overflow-hidden">
+                    <img 
+                      src={service.image} 
+                      alt={service.title}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Icon className="w-5 h-5 text-secondary" />
+                          {service.title}
+                        </CardTitle>
+                        <CardDescription>{service.description}</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2 mb-4">
+                      {service.details.map((detail, didx) => (
+                        <li key={didx} className="flex items-center gap-2 text-sm text-gray-600">
+                          <CheckCircle className="w-4 h-4 text-secondary flex-shrink-0" />
+                          {detail}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="text-lg font-semibold text-primary mb-4">{service.price}</div>
+                    <Button className="w-full bg-secondary hover:bg-secondary/90">
+                      Get Started
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
-      )}
-    </>
+      </section>
+
+      {/* Features Section */}
+      <section className="bg-gray-50 py-16 md:py-24">
+        <div className="container">
+          <h2 className="text-3xl font-bold text-primary text-center mb-12">Why Choose Our Services?</h2>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {features.map((feature, idx) => {
+              const Icon = feature.icon;
+              return (
+                <div key={idx}>
+                  <div className="mb-4 rounded-lg overflow-hidden h-48">
+                    <img 
+                      src={feature.image} 
+                      alt={feature.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Icon className="w-6 h-6 text-secondary flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-semibold text-primary mb-2">{feature.title}</h3>
+                      <p className="text-gray-600 text-sm">{feature.description}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="py-16 md:py-24">
+        <div className="container">
+          <h2 className="text-3xl font-bold text-primary text-center mb-12">Transparent Pricing</h2>
+          
+          <div className="bg-white border-2 border-gray-200 rounded-lg p-8">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="text-xl font-semibold text-primary mb-4">Pricing Based On:</h3>
+                <ul className="space-y-3 text-gray-600">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-secondary" />
+                    Package weight
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-secondary" />
+                    Delivery distance
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-secondary" />
+                    Service type selected
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-secondary" />
+                    Insurance (optional)
+                  </li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-xl font-semibold text-primary mb-4">No Hidden Fees:</h3>
+                <ul className="space-y-3 text-gray-600">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-secondary" />
+                    Upfront pricing quote
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-secondary" />
+                    No surprise charges
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-secondary" />
+                    Discounts for bulk orders
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-secondary" />
+                    Loyalty rewards program
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="bg-gradient-to-r from-primary to-secondary text-white py-16">
+        <div className="container text-center">
+          <h2 className="text-3xl font-bold mb-4">Ready to Ship?</h2>
+          <p className="text-xl text-blue-100 mb-8">Get started with Nexus Global Parcel today</p>
+          <Link to="/track">
+            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+              Create Your First Shipment
+            </Button>
+          </Link>
+        </div>
+      </section>
+    </Layout>
   );
 }

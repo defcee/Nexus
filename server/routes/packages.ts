@@ -1,5 +1,8 @@
 import { RequestHandler } from "express";
 import { pool } from "../db";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 type PackageStatus =
   | "Pending"
@@ -13,18 +16,18 @@ const generateTrackingNumber = (): string => {
 };
 
 // =====================================================
-// CREATE PACKAGE
+// CREATE PACKAGE (WITH EMAIL NOTIFICATION)
 // =====================================================
 export const handleCreatePackage: RequestHandler = async (req, res) => {
   try {
-    const sender = req.body.senderName || req.body.sender_name;
-    const receiver = req.body.receiverName || req.body.receiver_name;
-    const address =
-      req.body.receiverAddress || req.body.receiver_address;
-    const phone = req.body.receiverPhone || req.body.receiver_phone;
-    const type = req.body.packageType || req.body.package_type;
+    const sender = req.body.sender_name || req.body.senderName;
+    const receiver = req.body.receiver_name || req.body.receiverName;
+    const address = req.body.receiver_address || req.body.receiverAddress;
+    const phone = req.body.receiver_phone || req.body.receiverPhone;
+    const type = req.body.package_type || req.body.packageType;
     const weight = req.body.weight;
     const price = req.body.price;
+    const recipient_email = req.body.recipient_email; // ✅ NEW
 
     if (
       !sender ||
@@ -33,11 +36,12 @@ export const handleCreatePackage: RequestHandler = async (req, res) => {
       !phone ||
       !type ||
       !weight ||
-      !price
+      !price ||
+      !recipient_email
     ) {
-      return res
-        .status(400)
-        .json({ error: "All fields are required" });
+      return res.status(400).json({
+        error: "All fields including recipient email are required",
+      });
     }
 
     const trackingNumber = generateTrackingNumber();
@@ -58,9 +62,10 @@ export const handleCreatePackage: RequestHandler = async (req, res) => {
         price,
         status,
         current_location,
-        eta
+        eta,
+        recipient_email
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
       RETURNING *
       `,
       [
@@ -75,32 +80,63 @@ export const handleCreatePackage: RequestHandler = async (req, res) => {
         "Pending",
         "Warehouse",
         eta,
+        recipient_email,
       ]
     );
 
+    const newPackage = result.rows[0];
+
+    // =====================================================
+    // EMAIL NOTIFICATION (RESEND)
+    // =====================================================
+    try {
+      await resend.emails.send({
+        from: `Nexus Logistics <${process.env.FROM_EMAIL}>`,
+        to: recipient_email,
+        subject: `📦 Your Package Has Been Created - ${trackingNumber}`,
+        html: `
+          <div style="font-family:Arial;padding:20px">
+            <h2>Package Created Successfully</h2>
+
+            <p><b>Tracking Number:</b> ${trackingNumber}</p>
+            <p><b>Sender:</b> ${sender}</p>
+            <p><b>Receiver:</b> ${receiver}</p>
+            <p><b>Package Type:</b> ${type}</p>
+            <p><b>Status:</b> Pending</p>
+            <p><b>ETA:</b> ${eta.toDateString()}</p>
+
+            <hr />
+            <p style="color:gray;font-size:12px">
+              Nexus Logistics - Automated Notification
+            </p>
+          </div>
+        `,
+      });
+
+      console.log("✅ Email sent to:", recipient_email);
+    } catch (emailErr) {
+      console.error("❌ EMAIL ERROR:", emailErr);
+    }
+
     return res.status(201).json({
       success: true,
-      package: result.rows[0],
+      package: newPackage,
     });
   } catch (err) {
     console.error("CREATE PACKAGE ERROR:", err);
-    return res
-      .status(500)
-      .json({ error: "Failed to create package" });
+    return res.status(500).json({
+      error: "Failed to create package",
+    });
   }
 };
 
 // =====================================================
 // GET ALL PACKAGES
 // =====================================================
-export const handleGetAllPackages: RequestHandler = async (
-  _req,
-  res
-) => {
+export const handleGetAllPackages: RequestHandler = async (_req, res) => {
   try {
     const result = await pool.query(`
-      SELECT * FROM packages
-      ORDER BY id DESC
+      SELECT * FROM packages ORDER BY id DESC
     `);
 
     const packages = result.rows.map((p) => ({
@@ -117,24 +153,22 @@ export const handleGetAllPackages: RequestHandler = async (
       weight: p.weight,
       price: p.price,
       eta: p.eta,
+      recipient_email: p.recipient_email, // ✅ included
     }));
 
     return res.json({ packages });
   } catch (err) {
     console.error("GET PACKAGES ERROR:", err);
-    return res
-      .status(500)
-      .json({ error: "Failed to fetch packages" });
+    return res.status(500).json({
+      error: "Failed to fetch packages",
+    });
   }
 };
 
 // =====================================================
 // TRACK PACKAGE
 // =====================================================
-export const handleTrackPackage: RequestHandler = async (
-  req,
-  res
-) => {
+export const handleTrackPackage: RequestHandler = async (req, res) => {
   try {
     const { trackingNumber } = req.params;
 
@@ -155,8 +189,7 @@ export const handleTrackPackage: RequestHandler = async (
 
     return res.json(result.rows[0]);
   } catch (err) {
-    console.error("TRACK PACKAGE ERROR:", err);
-
+    console.error("TRACK ERROR:", err);
     return res.status(500).json({
       error: "Tracking failed",
     });
@@ -164,12 +197,9 @@ export const handleTrackPackage: RequestHandler = async (
 };
 
 // =====================================================
-// UPDATE PACKAGE (FULL EDIT)
+// UPDATE PACKAGE
 // =====================================================
-export const handleUpdatePackage: RequestHandler = async (
-  req,
-  res
-) => {
+export const handleUpdatePackage: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -216,9 +246,7 @@ export const handleUpdatePackage: RequestHandler = async (
     );
 
     if (!result.rows[0]) {
-      return res.status(404).json({
-        error: "Package not found",
-      });
+      return res.status(404).json({ error: "Package not found" });
     }
 
     return res.json({
@@ -226,8 +254,7 @@ export const handleUpdatePackage: RequestHandler = async (
       package: result.rows[0],
     });
   } catch (err) {
-    console.error("UPDATE PACKAGE ERROR:", err);
-
+    console.error("UPDATE ERROR:", err);
     return res.status(500).json({
       error: "Failed to update package",
     });
@@ -235,84 +262,62 @@ export const handleUpdatePackage: RequestHandler = async (
 };
 
 // =====================================================
-// UPDATE PACKAGE STATUS
+// UPDATE STATUS
 // =====================================================
-export const handleUpdatePackageStatus: RequestHandler =
-  async (req, res) => {
-    try {
-      const { trackingNumber } = req.params;
-      const { status, location } = req.body;
+export const handleUpdatePackageStatus: RequestHandler = async (
+  req,
+  res
+) => {
+  try {
+    const { trackingNumber } = req.params;
+    const { status, location } = req.body;
 
-      if (!status || !location) {
-        return res.status(400).json({
-          error: "Missing fields",
-        });
-      }
-
-      const result = await pool.query(
-        `
-        UPDATE packages
-        SET
-          status = $1,
+    const result = await pool.query(
+      `
+      UPDATE packages
+      SET status = $1,
           current_location = $2
-        WHERE tracking_number = $3
-        RETURNING *
-        `,
-        [status, location, trackingNumber]
-      );
+      WHERE tracking_number = $3
+      RETURNING *
+      `,
+      [status, location, trackingNumber]
+    );
 
-      if (!result.rows[0]) {
-        return res.status(404).json({
-          error: "Package not found",
-        });
-      }
-
-      return res.json({
-        success: true,
-        package: result.rows[0],
-      });
-    } catch (err) {
-      console.error(err);
-
-      return res.status(500).json({
-        error: "Update failed",
-      });
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: "Package not found" });
     }
-  };
+
+    return res.json({
+      success: true,
+      package: result.rows[0],
+    });
+  } catch (err) {
+    console.error("STATUS ERROR:", err);
+    return res.status(500).json({ error: "Update failed" });
+  }
+};
 
 // =====================================================
 // DELETE PACKAGE
 // =====================================================
-export const handleDeletePackage: RequestHandler = async (
-  req,
-  res
-) => {
+export const handleDeletePackage: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
 
     const result = await pool.query(
       `
-      DELETE FROM packages
-      WHERE id = $1
-      RETURNING *
+      DELETE FROM packages WHERE id = $1 RETURNING *
       `,
       [id]
     );
 
     if (!result.rows[0]) {
-      return res.status(404).json({
-        error: "Not found",
-      });
+      return res.status(404).json({ error: "Not found" });
     }
 
-    return res.json({
-      success: true,
-    });
+    return res.json({ success: true });
   } catch (err) {
-    console.error("DELETE PACKAGE ERROR:", err);
-
-    return res.status(500).json({
-      error: "Delete failed",
-    });
+    console.error("DELETE ERROR:", err);
+    return res.status(500).json({ error: "Delete failed" });
   }
 };

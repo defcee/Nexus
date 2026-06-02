@@ -82,18 +82,13 @@ export default function Track() {
       }
 
       // build history from available fields (DB-safe fallback)
-      const history: TrackingHistory[] = [
-        {
-          status: "Created",
-          location: pkg.receiver_address || "Warehouse",
-          timestamp: pkg.created_at || new Date().toISOString(),
-        },
-        {
-          status: pkg.status,
-          location: pkg.current_location || "In Transit",
-          timestamp: pkg.updated_at || new Date().toISOString(),
-        },
-      ];
+    const history: TrackingHistory[] = [
+  {
+    status: pkg.status,
+    location: pkg.current_location || "In Transit",
+    timestamp: pkg.updated_at || pkg.created_at || new Date().toISOString(),
+  },
+];
 
       const mapped: TrackingData = {
         trackingNumber: pkg.tracking_number,

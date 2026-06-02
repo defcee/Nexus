@@ -1,9 +1,10 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { handleContact } from "./routes/contact";
 
 import { pool } from "./db";
+
+import { handleContact } from "./routes/contact";
 
 import {
   handleSignup,
@@ -14,9 +15,9 @@ import {
 
 import {
   handleCreatePackage,
+  handleGetAllPackages,
   handleTrackPackage,
   handleUpdatePackageStatus,
-  handleGetAllPackages,
   handleDeletePackage,
   handleUpdatePackage,
 } from "./routes/packages";
@@ -52,9 +53,7 @@ export function createServer() {
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin) {
-          return callback(null, true);
-        }
+        if (!origin) return callback(null, true);
 
         if (
           allowedOrigins.includes(origin) ||
@@ -65,7 +64,6 @@ export function createServer() {
 
         return callback(new Error("Not allowed by CORS"));
       },
-
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
@@ -79,7 +77,7 @@ export function createServer() {
   // HEALTH CHECK
   // ==============================
   app.get("/api/test", (_req, res) => {
-    return res.json({
+    res.json({
       success: true,
       message: "API running",
     });
@@ -92,16 +90,13 @@ export function createServer() {
     try {
       const result = await pool.query("SELECT NOW() as now");
 
-      return res.json({
+      res.json({
         success: true,
         time: result.rows[0],
       });
     } catch (err) {
       console.error("DB ERROR:", err);
-
-      return res.status(500).json({
-        error: "DB error",
-      });
+      res.status(500).json({ error: "DB error" });
     }
   });
 
@@ -113,18 +108,20 @@ export function createServer() {
   app.get("/api/users/:id", handleGetProfile);
   app.put("/api/users/:id", handleUpdateProfile);
 
+  // ==============================
   // CONTACT ROUTE
+  // ==============================
   app.post("/api/contact", handleContact);
 
   // ==============================
   // PACKAGE ROUTES
   // ==============================
   app.post("/api/packages", handleCreatePackage);
-
-  app.get("/api/packages/track/:trackingNumber", handleTrackPackage);
   app.get("/api/packages", handleGetAllPackages);
 
+  app.get("/api/packages/track/:trackingNumber", handleTrackPackage);
   app.put("/api/packages/:trackingNumber/status", handleUpdatePackageStatus);
+
   app.put("/api/packages/:id", handleUpdatePackage);
   app.delete("/api/packages/:id", handleDeletePackage);
 
@@ -138,7 +135,7 @@ export function createServer() {
   app.get("/api/admin/chat", handleGetChatMessages);
   app.post("/api/admin/chat", handleSaveChatMessage);
 
-  // ✅ PUBLIC CHAT ROUTES (FIXED POSITION)
+  // PUBLIC CHAT ROUTES
   app.get("/api/chat", handleGetChatMessages);
   app.post("/api/chat", handleSaveChatMessage);
 
