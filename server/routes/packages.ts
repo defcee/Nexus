@@ -110,9 +110,11 @@ export const handleCreatePackage: RequestHandler = async (req, res) => {
           sender_name,
           receiver_name,
           sender_address,
-          receiver_address
+          receiver_address,
+          receiver_email,
+          eta
         )
-        VALUES ($1,$2,$3,$4,$5,$6,$7)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
         `,
         [
           invoiceNumber,
@@ -122,6 +124,8 @@ export const handleCreatePackage: RequestHandler = async (req, res) => {
           receiver_name,
           sender_address,
           receiver_address,
+          receiver_email,
+          eta
         ]
       );
     } catch (invoiceErr) {
