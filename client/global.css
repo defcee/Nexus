@@ -135,4 +135,20 @@
   .shadow-soft {
     @apply shadow-lg;
   }
+
+  .hero-bg {
+    @apply relative overflow-hidden bg-cover bg-center bg-no-repeat;
+    background-image: url('/assets/hero-courier.jpg');
+  }
+
+  .hero-bg::before {
+    content: "";
+    @apply absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/85 to-secondary/80;
+    z-index: 0;
+  }
+
+  .hero-bg > * {
+    position: relative;
+    z-index: 1;
+  }
 }

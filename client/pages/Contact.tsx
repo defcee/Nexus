@@ -165,40 +165,47 @@ export default function Contact() {
         </div>
 
         {/* Contact Cards */}
-        <div className="mb-16">
-          <h2 className="text-3xl font-bold text-primary text-center mb-12">
-            Other Ways to Reach Us
-          </h2>
+        {/* Contact Cards */}
+<div className="mb-16">
+  <h2 className="text-3xl font-bold text-primary text-center mb-12">
+    Other Ways to Reach Us
+  </h2>
 
-          <div className="grid md:grid-cols-4 gap-6">
-            {contactInfo.map((info, idx) => {
-              const Icon = info.icon;
-              return (
-                <div key={idx} className="group">
-                  <div className="mb-4 overflow-hidden rounded-lg h-40">
-                    <img
-                      src={info.image}
-                      alt={info.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Icon className="w-6 h-6 text-secondary mt-1" />
-                    <div>
-                      <h3 className="font-semibold text-primary">
-                        {info.title}
-                      </h3>
-                      <p className="text-gray-600 text-sm">
-                        {info.details}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+  <div className="grid md:grid-cols-4 gap-6 justify-items-center">
+    {contactInfo.map((info, idx) => {
+      const Icon = info.icon;
+
+      return (
+        <div
+          key={idx}
+          className="group flex flex-col items-center text-center max-w-xs"
+        >
+          <div className="mb-4 overflow-hidden rounded-lg h-40 w-full">
+            <img
+              src={info.image}
+              alt={info.title}
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            />
+          </div>
+
+          <div className="flex flex-col items-center">
+            <Icon className="w-6 h-6 text-secondary mb-2" />
+
+            <div>
+              <h3 className="font-semibold text-primary">
+                {info.title}
+              </h3>
+
+              <p className="text-gray-600 text-sm">
+                {info.details}
+              </p>
+            </div>
           </div>
         </div>
-
+      );
+    })}
+  </div>
+</div>
         {/* FAQ */}
         <div className="bg-gray-50 rounded-lg p-8">
           <h2 className="text-2xl font-bold text-primary mb-8 text-center">

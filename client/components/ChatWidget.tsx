@@ -68,7 +68,7 @@ export default function ChatWidget() {
   const handleConnectAgent = () => {
     const agentMessage: Message = {
       id: messages.length + 1,
-      text: "An agent will be with you shortly. Please wait...",
+      text: "contact an agent at support@nexusglog.com",
       sender: "agent",
       timestamp: new Date(),
     };

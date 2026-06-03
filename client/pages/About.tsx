@@ -37,7 +37,7 @@ export default function About() {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-primary to-secondary text-white py-16 md:py-24">
+      <section className="hero-bg text-white py-16 md:py-24">
         <div className="container">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">About Nexus Global Parcel</h1>
           <p className="text-xl text-blue-100 max-w-2xl">

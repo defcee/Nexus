@@ -158,17 +158,8 @@ export default function Index() {
   return (
     <Layout>
       {/* HERO */}
-      <section className="relative overflow-hidden py-16 md:py-24">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: "url('/assets/hero-courier.jpg')",
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/85 to-secondary/80" />
-        </div>
-
-        <div className="container relative z-10 grid md:grid-cols-2 gap-8 items-center">
+      <section className="hero-bg text-white py-16 md:py-24">
+        <div className="container grid md:grid-cols-2 gap-8 items-center">
           <div className="text-white">
             <h1 className="text-5xl font-bold mb-4">
               Track Your Parcel in Real-Time
@@ -247,10 +238,7 @@ export default function Index() {
             style: { height: "500px", width: "100%" },
           } as any)}
         >
-          <TileLayer
-            attribution="&copy; OpenStreetMap contributors"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
           <Marker position={[40.7128, -74.006]}>
             <Popup>New York Coverage</Popup>
