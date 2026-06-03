@@ -106,8 +106,8 @@ export default function Track() {
       lng: Number(pkg.lng),
     }
   : {
-      lat: 6.5244,
-      lng: 3.3792,
+      lat: 39.8283,
+      lng: -98.5795,
     },
 
         history,

@@ -102,41 +102,46 @@ console.log("RECEIVER EMAIL:", receiver_email);
     // =========================
     // 2. CREATE INVOICE (FIXED CRASH)
     // =========================
-    try {
-      const invoiceNumber = `INV-${Date.now()}`;
+    console.log("STEP 2: ABOUT TO CREATE INVOICE");
 
-      await pool.query(
-        `
-        INSERT INTO invoices (
-          invoice_number,
-          tracking_number,
-          total_amount,
-          sender_name,
-          receiver_name,
-          sender_address,
-          receiver_address,
-          receiver_email,
-          eta
-        )
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-        `,
-        [
-          invoiceNumber,
-          newPackage.tracking_number,
-          cleanPrice,
-          sender_name,
-          receiver_name,
-          sender_address,
-          receiver_address,
-          receiver_email,
-          eta
-        ]
-      );
-    } catch (invoiceErr) {
-      // 🔥 IMPORTANT: do NOT break package creation if invoice fails
-      console.error("INVOICE ERROR (NON-FATAL):", invoiceErr);
-    }
+try {
+  console.log("INVOICE TRY BLOCK ENTERED");
 
+  const invoiceNumber = `INV-${Date.now()}`;
+
+  const result = await pool.query(
+    `
+    INSERT INTO invoices (
+      invoice_number,
+      tracking_number,
+      total_amount,
+      sender_name,
+      receiver_name,
+      sender_address,
+      receiver_address,
+      receiver_email,
+      eta
+    )
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+    RETURNING *
+    `,
+    [
+      invoiceNumber,
+      newPackage.tracking_number,
+      cleanPrice,
+      sender_name,
+      receiver_name,
+      sender_address,
+      receiver_address,
+      receiver_email,
+      eta,
+    ]
+  );
+
+  console.log("INVOICE INSERT SUCCESS:", result.rows[0]);
+} catch (invoiceErr) {
+  console.error("INVOICE ERROR:", invoiceErr);
+}
     // =========================
     // 3. SEND EMAIL (SAFE)
     // =========================

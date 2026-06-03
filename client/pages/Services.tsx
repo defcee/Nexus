@@ -17,7 +17,7 @@ export default function Services() {
         "Signature confirmation"
       ],
       image: "/assets/local-delivery.jpg",
-      price: "From $500"
+      
     },
     {
       icon: MapPin,
@@ -167,8 +167,9 @@ export default function Services() {
                         </li>
                       ))}
                     </ul>
-                    <div className="text-lg font-semibold text-primary mb-4">{service.price}</div>
-                    
+                    <Link to="/track">
+                      <Button className="w-full">Learn More</Button>
+                    </Link>
                   </CardContent>
                 </Card>
               );
