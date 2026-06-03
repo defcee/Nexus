@@ -10,7 +10,7 @@ export async function sendEmail(
   if (!to) return;
 
   return await resend.emails.send({
-    from: "Nexus Support <support@nexusglog.com>",
+    from: "Nexus Support <support@app.nexusglog.com>",
     to: [to],
     subject,
     text: message,

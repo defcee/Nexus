@@ -120,7 +120,8 @@ try {
       sender_address,
       receiver_address,
       receiver_email,
-      eta
+      eta,
+      status
     )
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
     RETURNING *
@@ -135,6 +136,7 @@ try {
       receiver_address,
       receiver_email,
       eta,
+      "Paid", // or "Pending"
     ]
   );
 
