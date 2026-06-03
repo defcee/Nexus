@@ -168,9 +168,7 @@ export default function Services() {
                       ))}
                     </ul>
                     <div className="text-lg font-semibold text-primary mb-4">{service.price}</div>
-                    <Button className="w-full bg-secondary hover:bg-secondary/90">
-                      Get Started
-                    </Button>
+                    
                   </CardContent>
                 </Card>
               );

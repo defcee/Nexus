@@ -100,10 +100,15 @@ export default function Track() {
         weight: `${pkg.weight} kg`,
         price: `$${pkg.price}`, // ✅ FIXED CURRENCY
 
-        coordinates: {
-          lat: 6.5244,
-          lng: 3.3792,
-        },
+        coordinates: pkg.lat && pkg.lng
+  ? {
+      lat: Number(pkg.lat),
+      lng: Number(pkg.lng),
+    }
+  : {
+      lat: 6.5244,
+      lng: 3.3792,
+    },
 
         history,
       };

@@ -33,6 +33,10 @@ export const handleCreatePackage: RequestHandler = async (req, res) => {
       origin,
     } = req.body;
 
+    console.log("CREATE PACKAGE BODY:", req.body);
+console.log("ETA:", eta);
+console.log("RECEIVER EMAIL:", receiver_email);
+
     const cleanWeight = Number(weight) || 0;
     const cleanPrice = Number(price) || 0;
 
@@ -136,12 +140,20 @@ export const handleCreatePackage: RequestHandler = async (req, res) => {
     // =========================
     // 3. SEND EMAIL (SAFE)
     // =========================
-   if (receiver_email && receiver_email.includes("@")) {
-  try {
-    await sendEmail(
-      receiver_email,
-      "📦 Your Package Has Been Created",
-      `
+    console.log("EMAIL VALUE:", receiver_email);
+
+    if (
+      receiver_email &&
+      typeof receiver_email === "string" &&
+      receiver_email.includes("@")
+    ) {
+      try {
+        console.log("SENDING EMAIL...");
+
+        await sendEmail(
+          receiver_email,
+          "📦 Your Package Has Been Created",
+          `
 Hello ${receiver_name},
 
 Your package has been successfully created.
@@ -153,12 +165,14 @@ ETA: ${eta || "Not set"}
 You can track your package anytime using your tracking number.
 
 Thank you.
-      `
-    );
-  } catch (emailErr) {
-    console.error("EMAIL FAILED:", emailErr);
-  }
-}
+          `
+        );
+
+        console.log("EMAIL SENT SUCCESSFULLY");
+      } catch (emailErr) {
+        console.error("EMAIL FAILED:", emailErr);
+      }
+    }
 
     return res.json({
       success: true,

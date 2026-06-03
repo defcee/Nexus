@@ -154,31 +154,20 @@ export default function AdminDashboard() {
   const handleCreatePackage = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log("FORM DATA:", formData);
+
     try {
       const res = await packageAPI.create(formData);
       const newPkg = res?.package;
+      const invoice = res?.invoice;
 
       if (!newPkg) return;
 
       setPackages((prev) => [newPkg, ...prev]);
 
-      const invoiceRes = await adminAPI.createInvoice({
-        trackingNumber: newPkg.tracking_number,
-        userId: null,
-        totalAmount: Number(newPkg.price),
-
-        sender_name: formData.sender_name,
-        sender_address: formData.sender_address,
-
-        receiver_name: formData.receiver_name,
-        receiver_address: formData.receiver_address,
-        receiver_email: formData.receiver_email, // ✅ ADDED
-        eta: formData.eta,
-      });
-
-      if (invoiceRes?.invoice) {
-        setInvoices((prev) => [invoiceRes.invoice, ...prev]);
-        downloadInvoice(invoiceRes.invoice);
+      if (invoice) {
+        setInvoices((prev) => [invoice, ...prev]);
+        downloadInvoice(invoice);
       }
 
       setFormData({
