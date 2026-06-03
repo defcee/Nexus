@@ -14,17 +14,17 @@ function generateTrackingNumber() {
 // CREATE PACKAGE
 // =====================================================
 export const handleCreatePackage: RequestHandler = async (req, res) => {
+  let createdInvoice = null;
+
   try {
     const {
       sender_name,
       sender_email,
       sender_address,
-
       receiver_name,
       receiver_email,
       receiver_address,
       receiver_phone,
-
       package_type,
       weight,
       price,
@@ -32,10 +32,6 @@ export const handleCreatePackage: RequestHandler = async (req, res) => {
       destination,
       origin,
     } = req.body;
-
-    console.log("CREATE PACKAGE BODY:", req.body);
-console.log("ETA:", eta);
-console.log("RECEIVER EMAIL:", receiver_email);
 
     const cleanWeight = Number(weight) || 0;
     const cleanPrice = Number(price) || 0;
@@ -100,50 +96,52 @@ console.log("RECEIVER EMAIL:", receiver_email);
     const newPackage = result.rows[0];
 
     // =========================
-    // 2. CREATE INVOICE (FIXED CRASH)
+    // 2. CREATE INVOICE
     // =========================
     console.log("STEP 2: ABOUT TO CREATE INVOICE");
 
-try {
-  console.log("INVOICE TRY BLOCK ENTERED");
+    try {
+      console.log("INVOICE TRY BLOCK ENTERED");
 
-  const invoiceNumber = `INV-${Date.now()}`;
+      const invoiceNumber = `INV-${Date.now()}`;
 
-  const result = await pool.query(
-    `
-    INSERT INTO invoices (
-      invoice_number,
-      tracking_number,
-      total_amount,
-      sender_name,
-      receiver_name,
-      sender_address,
-      receiver_address,
-      receiver_email,
-      eta,
-      status
-    )
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-    RETURNING *
-    `,
-    [
-      invoiceNumber,
-      newPackage.tracking_number,
-      cleanPrice,
-      sender_name,
-      receiver_name,
-      sender_address,
-      receiver_address,
-      receiver_email,
-      eta,
-      "Paid", // or "Pending"
-    ]
-  );
+      const invoiceResult = await pool.query(
+        `
+        INSERT INTO invoices (
+          invoice_number,
+          tracking_number,
+          total_amount,
+          sender_name,
+          receiver_name,
+          sender_address,
+          receiver_address,
+          receiver_email,
+          eta,
+          status
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        RETURNING *
+        `,
+        [
+          invoiceNumber,
+          newPackage.tracking_number,
+          cleanPrice,
+          sender_name,
+          receiver_name,
+          sender_address,
+          receiver_address,
+          receiver_email,
+          eta,
+          "Paid",
+        ]
+      );
 
-  console.log("INVOICE INSERT SUCCESS:", result.rows[0]);
-} catch (invoiceErr) {
-  console.error("INVOICE ERROR:", invoiceErr);
-}
+      createdInvoice = invoiceResult.rows[0];
+      console.log("INVOICE INSERT SUCCESS:", createdInvoice);
+    } catch (invoiceErr) {
+      console.error("INVOICE ERROR:", invoiceErr);
+    }
+
     // =========================
     // 3. SEND EMAIL (SAFE)
     // =========================
@@ -184,6 +182,7 @@ Thank you.
     return res.json({
       success: true,
       package: newPackage,
+      invoice: createdInvoice,
     });
   } catch (error) {
     console.error("CREATE PACKAGE ERROR:", error);

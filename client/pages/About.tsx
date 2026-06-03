@@ -41,7 +41,8 @@ export default function About() {
         <div className="container">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">About Nexus Global Parcel</h1>
           <p className="text-xl text-blue-100 max-w-2xl">
-            We're revolutionizing parcel delivery with technology, reliability, and customer-first approach
+            Why Nexus Global Parcel” (or “Trusted by Businesses & Individuals Worldwide”)
+We stand apart through our unwavering commitment to reliability, innovation, and customer satisfaction. With a robust global network, state-of-the-art tracking, and a dedicated support team available 24/7, Nexus Global Parcel transforms complex logistics into a simple, stress-free experience. Whether you are an individual sending a personal package or a business managing high-volume shipments, we deliver excellence with every parcel.
           </p>
         </div>
       </section>

@@ -151,42 +151,58 @@ export default function AdminDashboard() {
   }, []);
 
   /* ========================= CREATE PACKAGE ========================= */
-  const handleCreatePackage = async (e: React.FormEvent) => {
-    e.preventDefault();
+ const handleCreatePackage = async (
+  e: React.FormEvent
+) => {
+  e.preventDefault();
 
-    console.log("FORM DATA:", formData);
+  console.log("FORM DATA:", formData);
 
-    try {
-      const res = await packageAPI.create(formData);
-      const newPkg = res?.package;
-      const invoice = res?.invoice;
+  try {
+    const res = await packageAPI.create(formData);
 
-      if (!newPkg) return;
+    const newPkg = res?.package;
+    const invoice = res?.invoice;
 
-      setPackages((prev) => [newPkg, ...prev]);
+    if (!newPkg) return;
 
-      if (invoice) {
-        setInvoices((prev) => [invoice, ...prev]);
-        downloadInvoice(invoice);
-      }
+    // Add new package instantly
+    setPackages((prev) => [
+      newPkg,
+      ...prev,
+    ]);
 
-      setFormData({
-        sender_name: "",
-        sender_address: "",
-        receiver_name: "",
-        receiver_address: "",
-        receiver_email: "",
-        receiver_phone: "",
-        package_type: "",
-        weight: "",
-        price: "",
-        eta: "",
-      });
+    // Add invoice instantly
+    if (invoice) {
+      setInvoices((prev) => [
+        invoice,
+        ...prev,
+      ]);
 
-    } catch (err) {
-      console.error("CREATE ERROR:", err);
+      // Auto open invoice
+      downloadInvoice(invoice);
     }
-  };
+
+    // Reset form
+    setFormData({
+      sender_name: "",
+      sender_address: "",
+      receiver_name: "",
+      receiver_address: "",
+      receiver_email: "",
+      receiver_phone: "",
+      package_type: "",
+      weight: "",
+      price: "",
+      eta: "",
+    });
+  } catch (err) {
+    console.error(
+      "CREATE ERROR:",
+      err
+    );
+  }
+};
 
   /* ========================= UI ========================= */
   return (

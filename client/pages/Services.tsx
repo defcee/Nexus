@@ -126,7 +126,13 @@ export default function Services() {
       <section className="bg-gradient-to-r from-primary to-secondary text-white py-16 md:py-24">
         <div className="container">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Our Services</h1>
-          <p className="text-xl text-blue-100">Comprehensive parcel delivery solutions for every need</p>
+          <p className="text-xl text-blue-100">Comprehensive parcel delivery solutions for every needAt Nexus Global Parcel, we offer a comprehensive suite of shipping solutions tailored to meet diverse customer needs:
+•  Local Delivery: Fast and dependable same-city and regional deliveries that prioritize speed and care for everyday shipping requirements.
+•  International Shipping: Expert handling of cross-border shipments with streamlined customs support, ensuring smooth global transit for your parcels.
+•  Same-Day Express: Urgent delivery options for time-sensitive items, guaranteeing rapid turnaround without compromising safety or quality.
+•  Fragile Item Handling: Specialized packaging and careful transit protocols designed to protect delicate, high-value, or sensitive goods throughout their journey.
+•  Refrigerated Shipping: Temperature-controlled solutions for perishable goods, pharmaceuticals, and other climate-sensitive items, maintaining optimal conditions from start to finish.
+•  Document Delivery: Secure and confidential courier services for important papers, contracts, and business documents that demand reliability and discretion.</p>
         </div>
       </section>
 

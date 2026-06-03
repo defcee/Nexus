@@ -158,7 +158,7 @@ export default function Track() {
           {/* SEARCH */}
           <div className="bg-gradient-to-br from-primary to-secondary rounded-2xl p-8 mb-12 text-white">
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
-              Track Your Parcel
+              “Track Your Parcel in Real-Time”. Stay in complete control of your shipment with our intuitive real-time tracking system. Powered by live GPS technology, you can monitor every stage of your parcel’s journey — from pickup to final delivery. Our platform provides instant updates, proactive alerts, and transparent visibility, eliminating uncertainty and keeping you informed every step of the way.
             </h1>
 
             <p className="text-blue-100 mb-8">
