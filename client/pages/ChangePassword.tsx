@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { authAPI } from "@/lib/api"; // or your api file
+import { Button } from "@/components/ui/button";
 
 export default function ChangePassword() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -14,16 +13,31 @@ export default function ChangePassword() {
     setMessage("");
 
     try {
-      await authAPI.updateUser("me", {
-        currentPassword,
-        newPassword,
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("/api/users/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
       });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message);
+      }
 
       setMessage("Password updated successfully");
       setCurrentPassword("");
       setNewPassword("");
     } catch (err: any) {
-      setMessage(err.response?.data?.message || "Error updating password");
+      setMessage(err.message);
     }
 
     setLoading(false);
@@ -48,10 +62,10 @@ export default function ChangePassword() {
       />
 
       <Button onClick={handleSubmit} disabled={loading}>
-        {loading ? "Updating..." : "Update Password"}
+        {loading ? "Updating..." : "Change Password"}
       </Button>
 
-      {message && <p className="text-sm mt-2">{message}</p>}
+      {message && <p className="text-sm">{message}</p>}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { pool } from "./db";
 import { handleSendEmail } from "./routes/email";
 import { handleContact } from "./routes/contact";
 
+
 import {
   handleSignup,
   handleLogin,
@@ -25,7 +26,10 @@ import {
   handleSaveChatMessage,
   handleGetInvoices,
   handleCreateInvoice,
+  handleAdminChangePassword,
 } from "./routes/admin";
+
+
 
 // 🔐 AUTH MIDDLEWARE (MAKE SURE THIS FILE EXISTS)
 import { authMiddleware } from "./middleware/authMiddleware";
@@ -113,6 +117,26 @@ export function createServer() {
     authMiddleware,
     handleChangePassword
   );
+
+  // ==============================
+// ADMIN ROUTES
+// ==============================
+app.post("/api/admin/login", handleAdminLogin);
+app.post("/api/admin/logout", handleAdminLogout);
+app.get("/api/admin/stats", handleGetAdminStats);
+
+app.get("/api/admin/chat", handleGetChatMessages);
+app.post("/api/admin/chat", handleSaveChatMessage);
+
+app.get("/api/admin/invoices", handleGetInvoices);
+app.post("/api/admin/invoices", handleCreateInvoice);
+
+// 🔐 ADD THIS LINE
+app.post(
+  "/api/admin/change-password",
+  authMiddleware,
+  handleAdminChangePassword
+);
 
   // ==============================
   // CONTACT ROUTE

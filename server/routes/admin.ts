@@ -327,3 +327,76 @@ export const handleCreateInvoice: RequestHandler = async (req, res) => {
     });
   }
 };
+
+// =====================================================
+// ADMIN CHANGE PASSWORD (NEW)
+// =====================================================
+
+export const handleAdminChangePassword: RequestHandler = async (req, res) => {
+  try {
+    const adminId = (req as any).admin?.id || (req as any).user?.id;
+
+    if (!adminId) {
+      return res.status(401).json({
+        error: "Unauthorized",
+      });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        error: "Current and new password are required",
+      });
+    }
+
+    // GET ADMIN
+    const result = await pool.query(
+      `SELECT * FROM admins WHERE id = $1`,
+      [adminId]
+    );
+
+    const admin = result.rows[0];
+
+    if (!admin) {
+      return res.status(404).json({
+        error: "Admin not found",
+      });
+    }
+
+    // VERIFY PASSWORD
+    let isMatch = false;
+
+    try {
+      isMatch = await bcrypt.compare(currentPassword, admin.password);
+    } catch {
+      isMatch = currentPassword === admin.password;
+    }
+
+    if (!isMatch) {
+      return res.status(400).json({
+        error: "Current password is incorrect",
+      });
+    }
+
+    // HASH NEW PASSWORD
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // UPDATE PASSWORD
+    await pool.query(
+      `UPDATE admins SET password = $1 WHERE id = $2`,
+      [hashedPassword, adminId]
+    );
+
+    return res.json({
+      success: true,
+      message: "Admin password updated successfully",
+    });
+  } catch (error) {
+    console.error("ADMIN CHANGE PASSWORD ERROR:", error);
+
+    return res.status(500).json({
+      error: "Failed to change password",
+    });
+  }
+};
