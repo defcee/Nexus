@@ -96,9 +96,9 @@ const downloadInvoice = (invoice: any) => {
 export default function AdminDashboard() {
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "packages" | "invoices" | "users" | "chat"
-  >("overview");
+ const [activeTab, setActiveTab] = useState<
+  "overview" | "packages" | "invoices" | "users" | "chat" | "password"
+>("overview");
 
   const [packages, setPackages] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -230,7 +230,57 @@ export default function AdminDashboard() {
             <Button onClick={() => setActiveTab("invoices")}>Invoices</Button>
             <Button onClick={() => setActiveTab("users")}>Users</Button>
             <Button onClick={() => setActiveTab("chat")}>Chat</Button>
+            <Button onClick={() => setActiveTab("password")}>
+  Change Password
+</Button>
           </div>
+
+          {/* CHANGE PASSWORD */}
+{activeTab === "password" && (
+  <Card>
+    <CardHeader>
+      <CardTitle>Change Password</CardTitle>
+    </CardHeader>
+
+    <CardContent className="space-y-4 max-w-md">
+      <Input
+        type="password"
+        placeholder="Current Password"
+        value={""}
+        onChange={() => {}}
+      />
+
+      <Input
+        type="password"
+        placeholder="New Password"
+        value={""}
+        onChange={() => {}}
+      />
+
+      <Button
+        onClick={async () => {
+          const token = localStorage.getItem("admin_token");
+
+          await fetch("/api/admin/change-password", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              currentPassword: "",
+              newPassword: "",
+            }),
+          });
+
+          alert("Password updated");
+        }}
+      >
+        Update Password
+      </Button>
+    </CardContent>
+  </Card>
+)}
 
           {/* FORM */}
           {activeTab === "overview" && (
