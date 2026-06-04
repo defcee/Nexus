@@ -132,11 +132,7 @@ app.get("/api/admin/invoices", handleGetInvoices);
 app.post("/api/admin/invoices", handleCreateInvoice);
 
 // 🔐 ADD THIS LINE
-app.post(
-  "/api/admin/change-password",
-  authMiddleware,
-  handleAdminChangePassword
-);
+app.post("/api/admin/change-password", authMiddleware,handleAdminChangePassword);
 
   // ==============================
   // CONTACT ROUTE

@@ -1,4 +1,4 @@
-import { RequestHandler } from "express";
+import { Request, Response, RequestHandler } from "express";
 import bcrypt from "bcrypt";
 import { pool } from "../db";
 
@@ -6,7 +6,7 @@ import { pool } from "../db";
 // ADMIN LOGIN
 // =====================================================
 
-export const handleAdminLogin: RequestHandler = async (req, res) => {
+export const handleAdminLogin = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
 
@@ -92,7 +92,7 @@ export const handleAdminLogin: RequestHandler = async (req, res) => {
 // ADMIN LOGOUT
 // =====================================================
 
-export const handleAdminLogout: RequestHandler = async (_req, res) => {
+export const handleAdminLogout = async (_req: Request, res: Response) => {
   return res.json({
     success: true,
     message: "Logged out successfully",
@@ -103,7 +103,7 @@ export const handleAdminLogout: RequestHandler = async (_req, res) => {
 // ADMIN STATS
 // =====================================================
 
-export const handleGetAdminStats: RequestHandler = async (_req, res) => {
+export const handleGetAdminStats = async (_req: Request, res: Response) => {
   try {
     const shipmentResult = await pool.query(`
       SELECT COUNT(*) AS totalshipments FROM packages
@@ -157,7 +157,7 @@ export const handleGetAdminStats: RequestHandler = async (_req, res) => {
 // CHAT MESSAGES
 // =====================================================
 
-export const handleGetChatMessages: RequestHandler = async (_req, res) => {
+export const handleGetChatMessages = async (_req: Request, res: Response) => {
   try {
     const result = await pool.query(`
       SELECT *
@@ -181,7 +181,7 @@ export const handleGetChatMessages: RequestHandler = async (_req, res) => {
 // SAVE CHAT MESSAGE (FIXED FOR CUSTOMER + ADMIN)
 // =====================================================
 
-export const handleSaveChatMessage: RequestHandler = async (req, res) => {
+export const handleSaveChatMessage = async (req: Request, res: Response) => {
   try {
     const { userId, message, sender } = req.body;
 
@@ -228,7 +228,7 @@ export const handleSaveChatMessage: RequestHandler = async (req, res) => {
 // GET INVOICES
 // =====================================================
 
-export const handleGetInvoices: RequestHandler = async (_req, res) => {
+export const handleGetInvoices = async (_req: Request, res: Response) => {
   try {
     const result = await pool.query(`
       SELECT *
@@ -334,69 +334,53 @@ export const handleCreateInvoice: RequestHandler = async (req, res) => {
 
 export const handleAdminChangePassword: RequestHandler = async (req, res) => {
   try {
-    const adminId = (req as any).admin?.id || (req as any).user?.id;
-
-    if (!adminId) {
-      return res.status(401).json({
-        error: "Unauthorized",
-      });
-    }
-
     const { currentPassword, newPassword } = req.body;
+    const adminId = (req as any).adminId;
 
-    if (!currentPassword || !newPassword) {
+    if (!adminId || !currentPassword || !newPassword) {
       return res.status(400).json({
-        error: "Current and new password are required",
+        error: "Missing required fields",
       });
     }
 
-    // GET ADMIN
     const result = await pool.query(
-      `SELECT * FROM admins WHERE id = $1`,
+      `SELECT password FROM admins WHERE id = $1`,
       [adminId]
     );
 
-    const admin = result.rows[0];
-
-    if (!admin) {
+    if (result.rows.length === 0) {
       return res.status(404).json({
         error: "Admin not found",
       });
     }
 
-    // VERIFY PASSWORD
-    let isMatch = false;
+    const passwordValid = await bcrypt.compare(
+      currentPassword,
+      result.rows[0].password
+    );
 
-    try {
-      isMatch = await bcrypt.compare(currentPassword, admin.password);
-    } catch {
-      isMatch = currentPassword === admin.password;
-    }
-
-    if (!isMatch) {
-      return res.status(400).json({
+    if (!passwordValid) {
+      return res.status(401).json({
         error: "Current password is incorrect",
       });
     }
 
-    // HASH NEW PASSWORD
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // UPDATE PASSWORD
     await pool.query(
       `UPDATE admins SET password = $1 WHERE id = $2`,
       [hashedPassword, adminId]
     );
 
-    return res.json({
+    return res.status(200).json({
       success: true,
-      message: "Admin password updated successfully",
+      message: "Password updated successfully",
     });
   } catch (error) {
-    console.error("ADMIN CHANGE PASSWORD ERROR:", error);
+    console.error("CHANGE PASSWORD ERROR:", error);
 
     return res.status(500).json({
       error: "Failed to change password",
     });
   }
-};
+}

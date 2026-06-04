@@ -105,6 +105,8 @@ export default function AdminDashboard() {
   const [messages, setMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [editingPackage, setEditingPackage] = useState<any>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   const [formData, setFormData] = useState({
     sender_name: "",
@@ -224,6 +226,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* TABS */}
+
           <div className="flex gap-3 mb-6">
             <Button onClick={() => setActiveTab("overview")}>Overview</Button>
             <Button onClick={() => setActiveTab("packages")}>Packages</Button>
@@ -246,8 +249,8 @@ export default function AdminDashboard() {
       <Input
         type="password"
         placeholder="Current Password"
-        value={""}
-        onChange={() => {}}
+        value={currentPassword}
+        onChange={(e) => setCurrentPassword(e.target.value)}
       />
 
       <Input
