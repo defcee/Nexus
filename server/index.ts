@@ -1,10 +1,10 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { handleSendEmail } from "./routes/email";
 
 import { pool } from "./db";
 
+import { handleSendEmail } from "./routes/email";
 import { handleContact } from "./routes/contact";
 
 import {
@@ -12,6 +12,7 @@ import {
   handleLogin,
   handleGetProfile,
   handleUpdateProfile,
+  handleChangePassword, // ✅ ADDED
 } from "./routes/auth";
 
 import * as packages from "./routes/packages";
@@ -25,6 +26,9 @@ import {
   handleGetInvoices,
   handleCreateInvoice,
 } from "./routes/admin";
+
+// 🔐 AUTH MIDDLEWARE (MAKE SURE THIS FILE EXISTS)
+import { authMiddleware } from "./middleware/authMiddleware";
 
 export function createServer() {
   console.log("====================================");
@@ -99,8 +103,16 @@ export function createServer() {
   // ==============================
   app.post("/api/signup", handleSignup);
   app.post("/api/login", handleLogin);
+
   app.get("/api/users/:id", handleGetProfile);
   app.put("/api/users/:id", handleUpdateProfile);
+
+  // 🔐 CHANGE PASSWORD (PROTECTED)
+  app.post(
+    "/api/users/change-password",
+    authMiddleware,
+    handleChangePassword
+  );
 
   // ==============================
   // CONTACT ROUTE
@@ -117,6 +129,7 @@ export function createServer() {
     "/api/packages/track/:trackingNumber",
     (packages as any).handleTrackPackage
   );
+
   app.put(
     "/api/packages/:trackingNumber/status",
     (packages as any).handleUpdatePackageStatus
@@ -141,6 +154,7 @@ export function createServer() {
 
   app.get("/api/admin/invoices", handleGetInvoices);
   app.post("/api/admin/invoices", handleCreateInvoice);
+
   app.post("/api/email/send", handleSendEmail);
 
   return app;
