@@ -247,18 +247,25 @@ export default function AdminDashboard() {
 
     <CardContent className="space-y-4 max-w-md">
       <Input
-        type="password"
-        placeholder="Current Password"
-        value={currentPassword}
-        onChange={(e) => setCurrentPassword(e.target.value)}
-      />
+  type="password"
+  placeholder="Current Password"
+  value={currentPassword}
+  onChange={(e) => setCurrentPassword(e.target.value)}
+/>
 
-      <Input
-        type="password"
-        placeholder="New Password"
-        value={""}
-        onChange={() => {}}
-      />
+<Input
+  type="password"
+  placeholder="New Password"
+  value={newPassword}
+  onChange={(e) => setNewPassword(e.target.value)}
+/>
+
+<Input
+  type="password"
+  placeholder="Confirm Password"
+  value={confirmPassword}
+  onChange={(e) => setConfirmPassword(e.target.value)}
+/>
 
       <Button
         onClick={async () => {
