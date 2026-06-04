@@ -15,6 +15,15 @@ import { adminAPI, packageAPI } from "@/lib/api";
 
 const logoUrl = "/assets/logo.png";
 
+ const [packages, setPackages] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [editingPackage, setEditingPackage] = useState<any>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
 /* ========================= INVOICE DOWNLOAD ========================= */
 const downloadInvoice = (invoice: any) => {
   const win = window.open("", "_blank");
@@ -100,15 +109,7 @@ export default function AdminDashboard() {
   "overview" | "packages" | "invoices" | "users" | "chat" | "password"
 >("overview");
 
-  const [packages, setPackages] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [messages, setMessages] = useState<any[]>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [editingPackage, setEditingPackage] = useState<any>(null);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-
-  const [formData, setFormData] = useState({
+   const [formData, setFormData] = useState({
     sender_name: "",
     sender_address: "",
     receiver_name: "",
@@ -268,26 +269,51 @@ export default function AdminDashboard() {
 />
 
       <Button
-        onClick={async () => {
-          const token = localStorage.getItem("admin_token");
+  onClick={async () => {
+    const token = localStorage.getItem("admin_token");
 
-          await fetch("/api/admin/change-password", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              currentPassword: "",
-              newPassword: "",
-            }),
-          });
+    if (!currentPassword || !newPassword) {
+      alert("Fill all password fields");
+      return;
+    }
 
-          alert("Password updated");
-        }}
-      >
-        Update Password
-      </Button>
+    if (newPassword !== confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update password");
+      }
+
+      alert("Password updated successfully");
+
+      // clear fields after success
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      alert(err.message);
+    }
+  }}
+>
+  Update Password
+</Button>
     </CardContent>
   </Card>
 )}
