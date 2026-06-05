@@ -80,6 +80,9 @@ export const handleAdminChangePassword: RequestHandler = async (req, res) => {
 
     const admin = result.rows[0];
 
+    console.log("ADMIN ROW:", admin);
+    console.log("PASSWORD IN DB:", admin.password);
+
     if (!admin) {
       return res.status(404).json({ error: "Admin not found" });
     }
