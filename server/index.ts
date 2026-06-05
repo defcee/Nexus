@@ -7,7 +7,6 @@ import { pool } from "./db";
 import { handleSendEmail } from "./routes/email";
 import { handleContact } from "./routes/contact";
 
-
 import {
   handleSignup,
   handleLogin,
@@ -17,10 +16,13 @@ import {
 } from "./routes/auth";
 
 import * as packages from "./routes/packages";
-
 import * as adminRoutes from "./routes/admin";
 
-const adminHandlers = (adminRoutes as any).default ?? adminRoutes;
+import { authMiddleware } from "./middleware/authMiddleware";
+
+/* ================================
+   SAFE DESTRUCTURING (IMPORTANT)
+================================ */
 const {
   handleAdminLogin,
   handleAdminLogout,
@@ -30,13 +32,11 @@ const {
   handleGetInvoices,
   handleCreateInvoice,
   handleAdminChangePassword,
-} = adminHandlers;
+} = adminRoutes;
 
-console.log("ADMIN HANDLERS:", adminHandlers);
-
-// 🔐 AUTH MIDDLEWARE (MAKE SURE THIS FILE EXISTS)
-import { authMiddleware } from "./middleware/authMiddleware";
-
+/* ================================
+   SERVER FACTORY
+================================ */
 export function createServer() {
   console.log("====================================");
   console.log("🚀 Initializing Nexus Server");
@@ -44,9 +44,9 @@ export function createServer() {
 
   const app = express();
 
-  // ==============================
-  // CORS
-  // ==============================
+  /* ================================
+     CORS CONFIG
+  ================================= */
   const CLIENT_URL = process.env.CLIENT_URL;
 
   const allowedOrigins = [
@@ -78,9 +78,9 @@ export function createServer() {
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true }));
 
-  // ==============================
-  // HEALTH CHECK
-  // ==============================
+  /* ================================
+     HEALTH CHECK
+  ================================= */
   app.get("/api/test", (_req, res) => {
     res.json({
       success: true,
@@ -88,9 +88,9 @@ export function createServer() {
     });
   });
 
-  // ==============================
-  // DB TEST
-  // ==============================
+  /* ================================
+     DB TEST
+  ================================= */
   app.get("/api/db-test", async (_req, res) => {
     try {
       const result = await pool.query("SELECT NOW() as now");
@@ -105,87 +105,74 @@ export function createServer() {
     }
   });
 
-  // ==============================
-  // AUTH ROUTES
-  // ==============================
+  /* ================================
+     AUTH ROUTES
+  ================================= */
   app.post("/api/signup", handleSignup);
   app.post("/api/login", handleLogin);
 
   app.get("/api/users/:id", handleGetProfile);
   app.put("/api/users/:id", handleUpdateProfile);
-  
-  // 🔐 CHANGE PASSWORD (PROTECTED)
+
   app.post(
     "/api/users/change-password",
     authMiddleware,
     handleChangePassword
   );
 
-  // ==============================
-// ADMIN ROUTES
-// ==============================
-// ==============================
-// ADMIN ROUTES (CLEAN)
-// ==============================
-app.post("/api/admin/login", handleAdminLogin);
-app.post("/api/admin/logout", handleAdminLogout);
-app.get("/api/admin/stats", handleGetAdminStats);
-
-app.get("/api/admin/chat", handleGetChatMessages);
-app.post("/api/admin/chat", handleSaveChatMessage);
-
-app.get("/api/admin/invoices", handleGetInvoices);
-app.post("/api/admin/invoices", handleCreateInvoice);
-
-app.post(
-  "/api/admin/change-password",
-  authMiddleware,
-  handleAdminChangePassword
-);
-// 🔐 ADD THIS LINE
-
-
-  // ==============================
-  // CONTACT ROUTE
-  // ==============================
-  app.post("/api/contact", handleContact);
-
-  // ==============================
-  // PACKAGE ROUTES
-  // ==============================
-  app.post("/api/packages", packages.handleCreatePackage);
-  app.get("/api/packages", (packages as any).handleGetAllPackages);
-
-  app.get(
-    "/api/packages/track/:trackingNumber",
-    (packages as any).handleTrackPackage
-  );
-
-  app.put(
-    "/api/packages/:trackingNumber/status",
-    (packages as any).handleUpdatePackageStatus
-  );
-
-  app.put("/api/packages/:id", (packages as any).handleUpdatePackage);
-  app.delete("/api/packages/:id", (packages as any).handleDeletePackage);
-
-  // ==============================
-  // ADMIN ROUTES
-  // ==============================
+  /* ================================
+     ADMIN ROUTES (CLEAN - NO DUPLICATES)
+  ================================= */
   app.post("/api/admin/login", handleAdminLogin);
   app.post("/api/admin/logout", handleAdminLogout);
+
   app.get("/api/admin/stats", handleGetAdminStats);
 
   app.get("/api/admin/chat", handleGetChatMessages);
   app.post("/api/admin/chat", handleSaveChatMessage);
 
-  // PUBLIC CHAT ROUTES
-  app.get("/api/chat", handleGetChatMessages);
-  app.post("/api/chat", handleSaveChatMessage);
-
   app.get("/api/admin/invoices", handleGetInvoices);
   app.post("/api/admin/invoices", handleCreateInvoice);
 
+  app.post(
+    "/api/admin/change-password",
+    authMiddleware,
+    handleAdminChangePassword
+  );
+
+  /* ================================
+     CONTACT
+  ================================= */
+  app.post("/api/contact", handleContact);
+
+  /* ================================
+     PACKAGES
+  ================================= */
+  app.post("/api/packages", packages.handleCreatePackage);
+  app.get("/api/packages", packages.handleGetAllPackages);
+
+  app.get(
+    "/api/packages/track/:trackingNumber",
+    packages.handleTrackPackage
+  );
+
+  app.put(
+    "/api/packages/:trackingNumber/status",
+    packages.handleUpdatePackageStatus
+  );
+
+  app.put("/api/packages/:id", packages.handleUpdatePackage);
+  app.delete("/api/packages/:id", packages.handleDeletePackage);
+
+  /* ================================
+     CHAT (PUBLIC)
+  ================================= */
+  app.get("/api/chat", handleGetChatMessages);
+  app.post("/api/chat", handleSaveChatMessage);
+
+  /* ================================
+     EMAIL
+  ================================= */
   app.post("/api/email/send", handleSendEmail);
 
   return app;
