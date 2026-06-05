@@ -1,1 +1,272 @@
-import { Request, Response, RequestHandler } from "express"; import bcrypt from "bcrypt"; import { pool } from "../db"; // ===================================================== // ADMIN LOGIN // ===================================================== export const handleAdminLogin = async (req: Request, res: Response) => { try { const { username, password } = req.body; if (!username || !password) { return res.status(400).json({ error: "Username and password are required", }); } try { const result = await pool.query( SELECT * FROM admins WHERE username = $1 LIMIT 1 , [username] ); const admin = result.rows[0]; if (admin) { let passwordValid = false; try { passwordValid = await bcrypt.compare( password, admin.password ); } catch { passwordValid = password === admin.password; } if (!passwordValid) { return res.status(401).json({ error: "Invalid username or password", }); } return res.status(200).json({ success: true, message: "Admin login successful", token: admin-token-${admin.id}, admin: { id: admin.id, username: admin.username, }, }); } } catch (dbError) { console.error("⚠️ Admin DB login failed", dbError); } const ENV_USER = process.env.ADMIN_USERNAME || "admin"; const ENV_PASS = process.env.ADMIN_PASSWORD || "admin123"; if (username === ENV_USER && password === ENV_PASS) { return res.status(200).json({ success: true, message: "Admin login successful", token: "admin-token-0", admin: { id: 0, username, }, }); } return res.status(401).json({ error: "Invalid username or password", }); } catch (error) { console.error("❌ ADMIN LOGIN ERROR", error); return res.status(500).json({ error: "Internal server error", }); } }; // ===================================================== // ADMIN LOGOUT // ===================================================== export const handleAdminLogout = async (_req: Request, res: Response) => { return res.json({ success: true, message: "Logged out successfully", }); }; // ===================================================== // ADMIN STATS // ===================================================== export const handleGetAdminStats = async (_req: Request, res: Response) => { try { const shipmentResult = await pool.query( SELECT COUNT(*) AS totalshipments FROM packages ); const deliveredResult = await pool.query( SELECT COUNT(*) AS deliveredshipments FROM packages WHERE status = $1 , ["Delivered"] ); const userResult = await pool.query( SELECT COUNT(*) AS totalusers FROM users ); const pendingResult = await pool.query( SELECT COUNT(*) AS pendingshipments FROM packages WHERE status != $1 , ["Delivered"] ); const revenueResult = await pool.query( SELECT COALESCE(SUM(total_amount),0) AS revenuetoday FROM invoices WHERE DATE(created_at)=CURRENT_DATE ); return res.json({ totalShipments: Number(shipmentResult.rows[0].totalshipments), deliveredShipments: Number(deliveredResult.rows[0].deliveredshipments), pendingShipments: Number(pendingResult.rows[0].pendingshipments), totalUsers: Number(userResult.rows[0].totalusers), revenueToday: Number(revenueResult.rows[0].revenuetoday), }); } catch (error) { console.error("ADMIN STATS ERROR:", error); return res.status(500).json({ error: "Failed to load admin stats", }); } }; // ===================================================== // CHAT MESSAGES // ===================================================== export const handleGetChatMessages = async (_req: Request, res: Response) => { try { const result = await pool.query( SELECT * FROM chat_messages ORDER BY created_at ASC ); return res.json({ messages: result.rows, }); } catch (error) { console.error(error); return res.status(500).json({ error: "Failed to load chat messages", }); } }; // ===================================================== // SAVE CHAT MESSAGE (FIXED FOR CUSTOMER + ADMIN) // ===================================================== export const handleSaveChatMessage = async (req: Request, res: Response) => { try { const { userId, message, sender } = req.body; if (!message || !sender) { return res.status(400).json({ error: "message and sender are required", }); } // normalize sender to prevent bad frontend data const cleanSender = sender === "admin" || sender === "user" ? sender : "user"; const insertResult = await pool.query( INSERT INTO chat_messages ( user_id, message, sender ) VALUES ($1,$2,$3) RETURNING * , [userId || null, message, cleanSender] ); return res.status(201).json({ success: true, data: insertResult.rows[0], }); } catch (error) { console.error(error); return res.status(500).json({ error: "Failed to save message", }); } }; // ===================================================== // GET INVOICES // ===================================================== export const handleGetInvoices = async (_req: Request, res: Response) => { try { const result = await pool.query( SELECT * FROM invoices ORDER BY created_at DESC ); return res.json({ invoices: result.rows, }); } catch (error) { console.error(error); return res.status(500).json({ error: "Failed to load invoices", }); } }; // ===================================================== // CREATE INVOICE // ===================================================== export const handleCreateInvoice: RequestHandler = async (req, res) => { try { const { trackingNumber, userId, totalAmount, sender_name, sender_address, receiver_name, receiver_address, } = req.body; if (!trackingNumber || !totalAmount) { return res.status(400).json({ error: "Tracking number and total amount are required", }); } const invoiceNumber = "INV-" + Date.now() + "-" + Math.floor(Math.random() * 9999); const insertResult = await pool.query( INSERT INTO invoices ( invoice_number, tracking_number, user_id, total_amount, sender_name, receiver_name, sender_address, receiver_address, status ) VALUES ( $1,$2,$3,$4,$5,$6,$7,$8,$9 ) RETURNING * , [ invoiceNumber, trackingNumber, userId || null, Number(totalAmount), sender_name || null, receiver_name || null, sender_address || null, receiver_address || null, "Pending", ] ); return res.status(201).json({ success: true, invoice: insertResult.rows[0], }); } catch (error) { console.error( "CREATE INVOICE ERROR:", error ); return res.status(500).json({ error: "Failed to create invoice", }); } }; // ===================================================== // ADMIN CHANGE PASSWORD (NEW) // ===================================================== export const handleAdminChangePassword: RequestHandler = async (req, res) => { try { const { currentPassword, newPassword } = req.body; const authHeader = req.headers.authorization; if (!authHeader) { return res.status(401).json({ error: "No token provided" }); } const adminId = authHeader.split("-")[2]; // because you used admin-token-ID const result = await pool.query( "SELECT * FROM admins WHERE id = $1", [adminId] ); const admin = result.rows[0]; if (!admin) { return res.status(404).json({ error: "Admin not found" }); } const isMatch = await bcrypt.compare(currentPassword, admin.password); if (!isMatch) { return res.status(400).json({ error: "Current password is wrong" }); } const hashed = await bcrypt.hash(newPassword, 10); await pool.query( "UPDATE admins SET password = $1 WHERE id = $2", [hashed, adminId] ); return res.json({ success: true, message: "Password updated successfully", }); } catch (err) { console.error(err); return res.status(500).json({ error: "Server error" }); } };
+// @ts-nocheck
+import Layout from "@/components/layout/Layout";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Plus, Edit2, Trash2, LogOut } from "lucide-react";
+
+import { adminAPI, packageAPI } from "@/lib/api";
+
+const logoUrl = "/assets/logo.png";
+
+/* ========================= INVOICE DOWNLOAD ========================= */
+const downloadInvoice = (invoice: any) => {
+  const win = window.open("", "_blank");
+  if (!win) return;
+
+  win.document.write(`
+    <html>
+      <head>
+        <title>Invoice</title>
+        <style>
+          body { font-family: Arial; padding: 40px; background:#f5f5f5; }
+          .invoice { background:#fff; padding:30px; border-radius:10px; max-width:900px; margin:auto; }
+          .header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:15px; }
+          .logo { width:120px; }
+          .section { margin-top:20px; padding:15px; border:1px solid #eee; border-radius:8px; }
+          .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+          .title { font-size:28px; font-weight:bold; }
+          table { width:100%; margin-top:20px; border-collapse:collapse; }
+          th, td { border:1px solid #ddd; padding:10px; }
+          th { background:#f3f3f3; }
+          .total { text-align:right; font-size:20px; margin-top:20px; font-weight:bold; }
+        </style>
+      </head>
+      <body>
+        <div class="invoice">
+          <div class="header">
+            <img src="${logoUrl}" class="logo" />
+            <div class="title">INVOICE</div>
+          </div>
+
+          <div class="grid">
+            <div class="section">
+              <h3>Sender</h3>
+              <p><b>Name:</b> ${invoice.sender_name || "N/A"}</p>
+              <p><b>Address:</b> ${invoice.sender_address || "N/A"}</p>
+            </div>
+
+            <div class="section">
+              <h3>Receiver</h3>
+              <p><b>Name:</b> ${invoice.receiver_name || "N/A"}</p>
+              <p><b>Email:</b> ${invoice.receiver_email || "N/A"}</p>
+              <p><b>Address:</b> ${invoice.receiver_address || "N/A"}</p>
+            </div>
+          </div>
+
+          <div class="section">
+            <p><b>Tracking:</b> ${invoice.tracking_number}</p>
+            <p><b>Date:</b> ${new Date(invoice.created_at).toLocaleString()}</p>
+            <p><b>Status:</b> ${invoice.status || "Pending"}</p>
+            <p><b>ETA:</b> ${invoice.eta || "Not set"}</p>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Shipping Fee</td>
+                <td>$${invoice.total_amount}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="total">
+            TOTAL: $${invoice.total_amount}
+          </div>
+        </div>
+      </body>
+    </html>
+  `);
+
+  win.document.close();
+};
+
+export default function AdminDashboard() {
+  const navigate = useNavigate();
+
+  /* ========================= STATE ========================= */
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "packages" | "invoices" | "users" | "chat" | "password"
+  >("overview");
+
+  const [packages, setPackages] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [editingPackage, setEditingPackage] = useState<any>(null);
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [formData, setFormData] = useState({
+    sender_name: "",
+    sender_address: "",
+    receiver_name: "",
+    receiver_address: "",
+    receiver_email: "",
+    receiver_phone: "",
+    package_type: "",
+    weight: "",
+    price: "",
+    eta: "",
+  });
+
+  const [editForm, setEditForm] = useState({
+    status: "",
+    location: "",
+    eta: "",
+  });
+
+  /* ========================= AUTH ========================= */
+  useEffect(() => {
+    const token = localStorage.getItem("admin_token");
+    if (!token) navigate("/admin");
+  }, [navigate]);
+
+  /* ========================= LOAD DATA ========================= */
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const pkgRes = await packageAPI.getAll();
+        const invRes = await adminAPI.getInvoices();
+        const chatRes = await adminAPI.getChatMessages();
+
+        setPackages(pkgRes?.packages || []);
+        setInvoices(invRes?.invoices || []);
+        setMessages(chatRes?.messages || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    load();
+  }, []);
+
+  /* ========================= PASSWORD HANDLER (FIXED) ========================= */
+  const handleChangePassword = async () => {
+    const token = localStorage.getItem("admin_token");
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      alert("Fill all password fields");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        "https://nexus-whsr.onrender.com/api/admin/change-password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            currentPassword,
+            newPassword,
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed");
+      }
+
+      alert("Password updated");
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  /* ========================= CREATE PACKAGE ========================= */
+  const handleCreatePackage = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const res = await packageAPI.create(formData);
+
+      const newPkg = res?.package;
+      const invoice = res?.invoice;
+
+      if (newPkg) setPackages((prev) => [newPkg, ...prev]);
+      if (invoice) {
+        setInvoices((prev) => [invoice, ...prev]);
+        downloadInvoice(invoice);
+      }
+
+      setFormData({
+        sender_name: "",
+        sender_address: "",
+        receiver_name: "",
+        receiver_address: "",
+        receiver_email: "",
+        receiver_phone: "",
+        package_type: "",
+        weight: "",
+        price: "",
+        eta: "",
+      });
+    } catch (err) {
+      console.error("CREATE ERROR:", err);
+    }
+  };
+
+  /* ========================= UI ========================= */
+  return React.createElement(
+    Layout,
+    null,
+    React.createElement(
+      "section",
+      { className: "py-8" },
+      React.createElement(
+        "div",
+        { className: "container" },
+        React.createElement(
+          "div",
+          { className: "flex justify-between mb-6" },
+          React.createElement("h1", { className: "text-xl font-bold" }, "Admin Dashboard"),
+          React.createElement(
+            Button,
+            { onClick: () => { localStorage.clear(); navigate("/admin"); } },
+            React.createElement(LogOut, { className: "mr-2" }),
+            "Logout"
+          )
+        ),
+        React.createElement(
+          "div",
+          { className: "flex gap-3 mb-6" },
+          React.createElement(Button, { onClick: () => setActiveTab("overview") }, "Overview"),
+          React.createElement(Button, { onClick: () => setActiveTab("packages") }, "Packages"),
+          React.createElement(Button, { onClick: () => setActiveTab("invoices") }, "Invoices"),
+          React.createElement(Button, { onClick: () => setActiveTab("users") }, "Users"),
+          React.createElement(Button, { onClick: () => setActiveTab("chat") }, "Chat"),
+          React.createElement(Button, { onClick: () => setActiveTab("password") }, "Change Password")
+        )
+      )
+    )
+  );
+}
