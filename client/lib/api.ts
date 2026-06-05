@@ -78,7 +78,7 @@ export async function apiFetch(
 }
 
 // ============================================
-// ADMIN API
+// ADMIN API (FIXED)
 // ============================================
 
 export const adminAPI = {
@@ -93,11 +93,9 @@ export const adminAPI = {
       method: "POST",
     }),
 
-  getStats: () =>
-    apiFetch("/admin/stats"),
+  getStats: () => apiFetch("/admin/stats"),
 
-  getChatMessages: () =>
-    apiFetch("/admin/chat"),
+  getChatMessages: () => apiFetch("/admin/chat"),
 
   saveChatMessage: (data: any) =>
     apiFetch("/admin/chat", {
@@ -105,8 +103,7 @@ export const adminAPI = {
       body: JSON.stringify(data),
     }),
 
-  getInvoices: () =>
-    apiFetch("/admin/invoices"),
+  getInvoices: () => apiFetch("/admin/invoices"),
 
   createInvoice: (data: any) =>
     apiFetch("/admin/invoices", {
@@ -114,9 +111,16 @@ export const adminAPI = {
       body: JSON.stringify(data),
     }),
 
-  // ============================================
-  // ✅ EMAIL FIX (ADDED)
-  // ============================================
+  // ✅ FIXED: CHANGE PASSWORD ADDED HERE
+  changePassword: (data: {
+    currentPassword: string;
+    newPassword: string;
+  }) =>
+    apiFetch("/admin/change-password", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   sendEmail: (data: {
     to: string | string[];
     subject: string;
@@ -129,7 +133,7 @@ export const adminAPI = {
 };
 
 // ============================================
-// PACKAGE API
+// PACKAGE API (FIXED ROUTES)
 // ============================================
 
 export const packageAPI = {
@@ -139,14 +143,14 @@ export const packageAPI = {
       body: JSON.stringify(data),
     }),
 
-  getAll: () =>
-    apiFetch("/packages"),
+  getAll: () => apiFetch("/packages"),
 
   track: (trackingNumber: string) =>
     apiFetch(`/packages/track/${trackingNumber}`),
 
-  update: (trackingNumber: string, data: any) =>
-    apiFetch(`/packages/${trackingNumber}`, {
+  // ❌ FIX: backend uses ID, NOT tracking number
+  update: (id: string | number, data: any) =>
+    apiFetch(`/packages/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     }),
@@ -180,8 +184,7 @@ export const authAPI = {
       body: JSON.stringify(data),
     }),
 
-  getUser: (id: string) =>
-    apiFetch(`/users/${id}`),
+  getUser: (id: string) => apiFetch(`/users/${id}`),
 
   updateUser: (id: string, data: any) =>
     apiFetch(`/users/${id}`, {
@@ -191,7 +194,7 @@ export const authAPI = {
 };
 
 // ============================================
-// CHAT API
+// CHAT API (USER SIDE)
 // ============================================
 
 export const chatAPI = {
@@ -201,6 +204,5 @@ export const chatAPI = {
       body: JSON.stringify(data),
     }),
 
-  getMessages: () =>
-    apiFetch("/chat"),
+  getMessages: () => apiFetch("/chat"),
 };

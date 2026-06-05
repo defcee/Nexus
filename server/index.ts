@@ -122,6 +122,9 @@ export function createServer() {
   // ==============================
 // ADMIN ROUTES
 // ==============================
+// ==============================
+// ADMIN ROUTES (CLEAN)
+// ==============================
 app.post("/api/admin/login", handleAdminLogin);
 app.post("/api/admin/logout", handleAdminLogout);
 app.get("/api/admin/stats", handleGetAdminStats);
@@ -132,8 +135,13 @@ app.post("/api/admin/chat", handleSaveChatMessage);
 app.get("/api/admin/invoices", handleGetInvoices);
 app.post("/api/admin/invoices", handleCreateInvoice);
 
+app.post(
+  "/api/admin/change-password",
+  authMiddleware,
+  handleAdminChangePassword
+);
 // 🔐 ADD THIS LINE
-app.post("/api/admin/change-password", authMiddleware,handleAdminChangePassword);
+
 
   // ==============================
   // CONTACT ROUTE
