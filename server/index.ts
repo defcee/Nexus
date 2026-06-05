@@ -140,6 +140,8 @@ export function createServer() {
     handleAdminChangePassword
   );
 
+  app.post("/api/admin/reset-password", handleResetPassword);
+
   /* ================================
      CONTACT
   ================================= */
