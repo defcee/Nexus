@@ -110,7 +110,7 @@ export function createServer() {
 
   app.get("/api/users/:id", handleGetProfile);
   app.put("/api/users/:id", handleUpdateProfile);
-
+  
   // 🔐 CHANGE PASSWORD (PROTECTED)
   app.post(
     "/api/users/change-password",

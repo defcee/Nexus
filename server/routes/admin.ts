@@ -335,52 +335,44 @@ export const handleCreateInvoice: RequestHandler = async (req, res) => {
 export const handleAdminChangePassword: RequestHandler = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const adminId = (req as any).adminId;
 
-    if (!adminId || !currentPassword || !newPassword) {
-      return res.status(400).json({
-        error: "Missing required fields",
-      });
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: "No token provided" });
     }
 
+    const adminId = authHeader.split("-")[2]; // because you used admin-token-ID
+
     const result = await pool.query(
-      `SELECT password FROM admins WHERE id = $1`,
+      "SELECT * FROM admins WHERE id = $1",
       [adminId]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: "Admin not found",
-      });
+    const admin = result.rows[0];
+
+    if (!admin) {
+      return res.status(404).json({ error: "Admin not found" });
     }
 
-    const passwordValid = await bcrypt.compare(
-      currentPassword,
-      result.rows[0].password
-    );
+    const isMatch = await bcrypt.compare(currentPassword, admin.password);
 
-    if (!passwordValid) {
-      return res.status(401).json({
-        error: "Current password is incorrect",
-      });
+    if (!isMatch) {
+      return res.status(400).json({ error: "Current password is wrong" });
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, 10);
 
     await pool.query(
-      `UPDATE admins SET password = $1 WHERE id = $2`,
-      [hashedPassword, adminId]
+      "UPDATE admins SET password = $1 WHERE id = $2",
+      [hashed, adminId]
     );
 
-    return res.status(200).json({
+    return res.json({
       success: true,
       message: "Password updated successfully",
     });
-  } catch (error) {
-    console.error("CHANGE PASSWORD ERROR:", error);
-
-    return res.status(500).json({
-      error: "Failed to change password",
-    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};

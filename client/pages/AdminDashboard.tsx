@@ -15,14 +15,7 @@ import { adminAPI, packageAPI } from "@/lib/api";
 
 const logoUrl = "/assets/logo.png";
 
- const [packages, setPackages] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [messages, setMessages] = useState<any[]>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [editingPackage, setEditingPackage] = useState<any>(null);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+ 
 
 /* ========================= INVOICE DOWNLOAD ========================= */
 const downloadInvoice = (invoice: any) => {
@@ -104,6 +97,15 @@ const downloadInvoice = (invoice: any) => {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+
+  const [packages, setPackages] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [editingPackage, setEditingPackage] = useState<any>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
  const [activeTab, setActiveTab] = useState<
   "overview" | "packages" | "invoices" | "users" | "chat" | "password"
@@ -283,7 +285,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch("/api/admin/change-password", {
+      const res = await fetch("http://localhost:5000/api/admin/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
