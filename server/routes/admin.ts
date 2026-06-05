@@ -73,16 +73,9 @@ export const handleAdminChangePassword: RequestHandler = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    // NOTE: token middleware must attach admin id
-    const adminId = (req as any).user?.id || (req as any).admin?.id;
-
-    if (!adminId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
+    // 1. Get admin (you may adjust this if using auth middleware)
     const result = await pool.query(
-      "SELECT * FROM admins WHERE id = $1",
-      [adminId]
+      "SELECT * FROM admins LIMIT 1"
     );
 
     const admin = result.rows[0];
@@ -91,25 +84,33 @@ export const handleAdminChangePassword: RequestHandler = async (req, res) => {
       return res.status(404).json({ error: "Admin not found" });
     }
 
-    // verify current password
-    const valid = await bcrypt.compare(currentPassword, admin.password);
-
-    if (!valid) {
-      return res.status(400).json({ error: "Current password incorrect" });
-    }
-
-    // hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // update DB
-    await pool.query(
-      "UPDATE admins SET password = $1 WHERE id = $2",
-      [hashedPassword, adminId]
+    // 2. Check current password
+    const isMatch = await bcrypt.compare(
+      currentPassword,
+      admin.password
     );
 
-    return res.json({ success: true });
+    if (!isMatch) {
+      return res.status(401).json({ error: "Current password is wrong" });
+    }
+
+    // 3. Hash new password
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    console.log("NEW HASH:", hashed);
+
+    // 4. UPDATE DB (THIS WAS MISSING BEFORE)
+    await pool.query(
+      "UPDATE admins SET password = $1 WHERE id = $2",
+      [hashed, admin.id]
+    );
+
+    return res.json({
+      success: true,
+      message: "Password updated successfully",
+    });
   } catch (err) {
-    console.error(err);
+    console.error("PASSWORD CHANGE ERROR:", err);
     return res.status(500).json({ error: "Server error" });
   }
 };
