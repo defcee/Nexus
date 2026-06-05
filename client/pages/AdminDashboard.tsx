@@ -285,7 +285,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/admin/change-password", {
+      const res = await fetch("https://nexus-whsr.onrender.com/api/admin/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
