@@ -139,8 +139,9 @@ export const handleCreatePackage: RequestHandler = async (req, res) => {
       createdInvoice = invoiceResult.rows[0];
       console.log("INVOICE INSERT SUCCESS:", createdInvoice);
     } catch (invoiceErr) {
-      console.error("INVOICE ERROR:", invoiceErr);
-    }
+  console.error("INVOICE ERROR:", invoiceErr);
+  createdInvoice = null;
+}
 
     // =========================
     // 3. SEND EMAIL (SAFE)

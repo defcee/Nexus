@@ -1,5 +1,3 @@
-// middleware/authMiddleware.ts
-
 import { RequestHandler } from "express";
 
 export const authMiddleware: RequestHandler = (req, res, next) => {
@@ -12,7 +10,6 @@ export const authMiddleware: RequestHandler = (req, res, next) => {
       });
     }
 
-    // Expected format: "Bearer mock-token-1"
     const token = authHeader.split(" ")[1];
 
     if (!token) {
@@ -21,8 +18,6 @@ export const authMiddleware: RequestHandler = (req, res, next) => {
       });
     }
 
-    // Your current token format:
-    // mock-token-123
     const parts = token.split("-");
 
     if (parts.length < 3) {
@@ -31,6 +26,7 @@ export const authMiddleware: RequestHandler = (req, res, next) => {
       });
     }
 
+    const role = parts[0]; // 👈 NEW (mock-token OR admin-token)
     const userId = parseInt(parts[2], 10);
 
     if (Number.isNaN(userId)) {
@@ -39,9 +35,10 @@ export const authMiddleware: RequestHandler = (req, res, next) => {
       });
     }
 
-    // ✅ THIS IS THE KEY PART
+    // attach user info
     (req as any).user = {
       id: userId,
+      role,
     };
 
     next();

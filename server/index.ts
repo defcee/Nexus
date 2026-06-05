@@ -13,12 +13,15 @@ import {
   handleLogin,
   handleGetProfile,
   handleUpdateProfile,
-  handleChangePassword, // ✅ ADDED
+  handleChangePassword,
 } from "./routes/auth";
 
 import * as packages from "./routes/packages";
 
-import {
+import * as adminRoutes from "./routes/admin";
+
+const adminHandlers = (adminRoutes as any).default ?? adminRoutes;
+const {
   handleAdminLogin,
   handleAdminLogout,
   handleGetAdminStats,
@@ -27,9 +30,7 @@ import {
   handleGetInvoices,
   handleCreateInvoice,
   handleAdminChangePassword,
-} from "./routes/admin";
-
-
+} = adminHandlers;
 
 // 🔐 AUTH MIDDLEWARE (MAKE SURE THIS FILE EXISTS)
 import { authMiddleware } from "./middleware/authMiddleware";
