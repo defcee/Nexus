@@ -32,6 +32,8 @@ const {
   handleAdminChangePassword,
 } = adminHandlers;
 
+console.log("ADMIN HANDLERS:", adminHandlers);
+
 // 🔐 AUTH MIDDLEWARE (MAKE SURE THIS FILE EXISTS)
 import { authMiddleware } from "./middleware/authMiddleware";
 
